@@ -585,22 +585,10 @@ public partial class KioskWindow : Window, IKioskHostActions
             : Visibility.Collapsed;
     }
 
-    private bool _hasCameraDevice;
+    private bool _cameraEnumerationRunning;
+    private string? _cameraRuntimeError;
 
-    private void UpdateCameraSettingsVisibility()
-    {
-        var show = _hasCameraDevice ? Visibility.Visible : Visibility.Collapsed;
-        if (CameraDevicePanel != null)
-            CameraDevicePanel.Visibility = show;
-        if (CameraStreamPanel != null)
-            CameraStreamPanel.Visibility = show;
-
-        if (!_hasCameraDevice)
-        {
-            SelectComboByTag(CameraStreamModeSelect.ComboBox, "off");
-            UpdateCameraStreamOptionsVisibility();
-        }
-    }
+    private async void RefreshCameras_Click(object sender, RoutedEventArgs e) => await PopulateCameraDevicesAsync();
 
     private void CameraStreamModeSelect_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -616,13 +604,6 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void PopulateCameraStreamForm()
     {
         if (CameraStreamModeSelect == null) return;
-        if (!_hasCameraDevice)
-        {
-            SelectComboByTag(CameraStreamModeSelect.ComboBox, "off");
-            UpdateCameraStreamOptionsVisibility();
-            return;
-        }
-
         var mode = (_settings.Sensors.CameraStream.Mode ?? "off").Trim().ToLowerInvariant();
         SelectComboByTag(CameraStreamModeSelect.ComboBox, mode is "mjpeg" or "motion" or "presence" ? mode : "off");
         MotionHoldSlider.Value = Math.Clamp(_settings.Sensors.CameraStream.MotionHoldMinutes, 1, 60);
@@ -636,13 +617,6 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void UpdateCameraStreamOptionsVisibility()
     {
         if (CameraStreamOptionsPanel == null || CameraStreamModeSelect == null) return;
-        if (!_hasCameraDevice)
-        {
-            CameraStreamOptionsPanel.Visibility = Visibility.Collapsed;
-            if (MotionWakeOptionsPanel != null) MotionWakeOptionsPanel.Visibility = Visibility.Collapsed;
-            return;
-        }
-
         var mode = "off";
         if (CameraStreamModeSelect.SelectedItem is ComboBoxItem item && item.Tag is string tag)
             mode = tag.Trim().ToLowerInvariant();
@@ -664,30 +638,40 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private async Task PopulateCameraDevicesAsync()
     {
-        if (CameraDeviceCombo == null) return;
-        var selectedId = _settings.Kiosk.CameraDeviceId ?? "";
-        CameraDeviceCombo.Items.Clear();
-        _hasCameraDevice = false;
-
+        if (CameraDeviceCombo == null || _cameraEnumerationRunning || _isClosing) return;
+        _cameraEnumerationRunning = true;
+        RefreshCamerasButton.IsEnabled = false;
+        CameraStatusText.Text = "Checking Windows cameras...";
         try
         {
+            var selectedId = CameraDeviceCombo.SelectedItem is ComboBoxItem selected && selected.Tag is string tag
+                ? tag : _settings.Kiosk.CameraDeviceId ?? "";
             var devices = await ListCameraDevicesWithTimeoutAsync();
-            _hasCameraDevice = devices.Count > 0;
-            if (_hasCameraDevice)
-            {
-                CameraDeviceCombo.Items.Add(new ComboBoxItem { Content = "Default camera", Tag = "" });
-                foreach (var (id, name) in devices)
-                    CameraDeviceCombo.Items.Add(new ComboBoxItem { Content = name, Tag = id });
-                SelectCameraDeviceCombo(selectedId);
-            }
+            if (_isClosing) return;
+            // Preserve a configured camera even when enumeration fails or a camera is unplugged.
+            CameraDeviceCombo.Items.Clear();
+            CameraDeviceCombo.Items.Add(new ComboBoxItem { Content = "Default camera", Tag = "" });
+            foreach (var (id, name) in devices)
+                CameraDeviceCombo.Items.Add(new ComboBoxItem { Content = name, Tag = id });
+            if (!string.IsNullOrEmpty(selectedId) && !devices.Any(d => d.Id == selectedId))
+                CameraDeviceCombo.Items.Add(new ComboBoxItem { Content = "Previously selected camera (unavailable)", Tag = selectedId });
+            SelectCameraDeviceCombo(selectedId);
+            CameraStatusText.Text = devices.Count == 0
+                ? "No cameras reported by Windows. Check the Camera app, camera driver and privacy permissions, then refresh."
+                : $"Windows detected {devices.Count} camera(s). Select the front camera.";
+            if (!string.IsNullOrWhiteSpace(_cameraRuntimeError))
+                CameraStatusText.Text += " Last camera error: " + _cameraRuntimeError;
         }
-        catch
+        catch (Exception ex)
         {
-            _hasCameraDevice = false;
+            if (!_isClosing) CameraStatusText.Text = "Camera detection failed: " + ex.Message + ". Try Refresh cameras.";
+            PanelLog.Write("Camera enumeration failed", ex);
         }
-
-        UpdateCameraSettingsVisibility();
-        PopulateCameraStreamForm();
+        finally
+        {
+            _cameraEnumerationRunning = false;
+            if (!_isClosing) RefreshCamerasButton.IsEnabled = true;
+        }
     }
 
     private void SelectCameraDeviceCombo(string? deviceId)
@@ -708,45 +692,27 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private static async Task<IReadOnlyList<(string Id, string Name)>> ListCameraDevicesWithTimeoutAsync()
     {
-        try
+        var task = CameraCaptureService.ListDevicesAsync();
+        if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(15))) != task)
         {
-            var task = CameraCaptureService.ListDevicesAsync();
-            if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(2))) != task)
-                return [];
-            return await task;
+            _ = task.ContinueWith(t => { _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
+            throw new TimeoutException("Windows did not return the camera list within 15 seconds");
         }
-        catch
-        {
-            return [];
-        }
+        return await task;
     }
 
     private async Task ApplyCameraStreamAsync()
     {
         try
         {
-            var hasCam = _hasCameraDevice;
-            if (!hasCam)
-            {
-                try
-                {
-                    var devices = await ListCameraDevicesWithTimeoutAsync();
-                    hasCam = devices.Count > 0;
-                    _hasCameraDevice = hasCam;
-                }
-                catch
-                {
-                    hasCam = false;
-                }
-            }
-
-            if (!hasCam)
-                _settings.Sensors.CameraStream.Mode = "off";
-
             await _cameraStream.ApplyAsync(_settings, _mqtt);
+            _cameraRuntimeError = null;
         }
         catch (Exception ex)
         {
+            _cameraRuntimeError = ex.Message;
+            if (!_isClosing && CameraStatusText != null)
+                CameraStatusText.Text = "Camera could not start: " + ex.Message;
             try
             {
                 var path = System.IO.Path.Combine(
@@ -884,6 +850,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
 
         SelectInputDeviceCombo(_settings.Kiosk.InputDeviceId);
+        PopulateCameraStreamForm();
         _ = PopulateCameraDevicesAsync();
         ShowSettingsButtonToggle.IsChecked = _settings.Kiosk.ShowSettingsButton;
         LockdownEnabledToggle.IsChecked = _settings.Kiosk.LockdownEnabled;
@@ -2181,17 +2148,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         else
             _settings.Kiosk.InputDeviceId = "";
 
-        if (!_hasCameraDevice)
-        {
-            _settings.Kiosk.CameraDeviceId = "";
-            _settings.Sensors.CameraStream.Mode = "off";
-        }
-        else
         {
             if (CameraDeviceCombo.SelectedItem is ComboBoxItem camItem && camItem.Tag is string camTag)
                 _settings.Kiosk.CameraDeviceId = camTag.Length == 0 ? "" : camTag.Trim();
-            else
-                _settings.Kiosk.CameraDeviceId = "";
 
             var camMode = "off";
             if (CameraStreamModeSelect.SelectedItem is ComboBoxItem modeItem && modeItem.Tag is string modeTag)

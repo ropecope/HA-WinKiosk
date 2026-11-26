@@ -604,7 +604,7 @@
                             </StackPanel>
 
                             <StackPanel Grid.Column="2">
-                                <settings:SettingsSection Header="Audio &amp; camera">
+                                <settings:SettingsSection Header="Audio">
                                     <TextBlock Text="Volume (%)" Style="{StaticResource SettingsItemLabel}"/>
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
@@ -658,13 +658,18 @@
                                                   Style="{StaticResource SettingsComboBox}"/>
                                     </StackPanel>
 
-                                    <StackPanel x:Name="CameraDevicePanel" Margin="0,0,0,10" Visibility="Collapsed">
+                                </settings:SettingsSection>
+
+                                <settings:SettingsSection Header="Camera">
+                                    <StackPanel x:Name="CameraDevicePanel" Margin="0,0,0,10">
                                         <TextBlock Text="Camera device" Style="{StaticResource SettingsItemLabel}"/>
                                         <ComboBox x:Name="CameraDeviceCombo"
                                                   Style="{StaticResource SettingsComboBox}"/>
+                                        <Button x:Name="RefreshCamerasButton" Content="Refresh cameras" MinHeight="40" Margin="0,8,0,4" Click="RefreshCameras_Click"/>
+                                        <TextBlock x:Name="CameraStatusText" Text="Checking cameras..." TextWrapping="Wrap" Style="{StaticResource SettingsHintText}"/>
                                     </StackPanel>
 
-                                    <StackPanel x:Name="CameraStreamPanel" Visibility="Collapsed">
+                                    <StackPanel x:Name="CameraStreamPanel">
                                         <settings:SettingsSelectRow x:Name="CameraStreamModeSelect"
                                                                     Label="Camera mode"
                                                                     SelectionChanged="CameraStreamModeSelect_SelectionChanged">

@@ -58,3 +58,6 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 
 ## Portable startup feedback
 - Owner reports single-file startup is slow and already has WebView2. Both portable artifacts now omit the WebView2 bootstrapper. Classic setup still handles prerequisites. Single EXE no longer requests extraction of all managed content, only required native dependencies; no compression. CI exercises both the OpenCV native Mat and WebView2 loader from an empty directory. First-run native extraction, antivirus scanning, and WebView initialization may still affect startup. Multi-file portable ZIP needs no bundle extraction and is the recommended fallback on 2 GB tablets. Actual speed not measured on Fusion5; no HA or Windows system changes.
+
+## Camera visibility fix
+- Camera is a separate visible settings section rather than hidden under Audio if Windows enumeration fails. Device enumeration permits up to 15 s, reports timeout/error/no devices, and has a manual refresh button. Mode and configured camera ID are not reset when enumeration fails. Runtime camera errors are visible in settings; camera off does not need enumeration to start kiosk. Existing local detection algorithms and HA unchanged. Verify two-camera discovery, driver/privacy access and wake on real Fusion5.
