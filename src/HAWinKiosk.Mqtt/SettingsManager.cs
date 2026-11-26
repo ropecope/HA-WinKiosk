@@ -70,14 +70,14 @@ public static class SettingsManager
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (!SensorReader.HasSystemBattery())
+        if (s.Sensors.Enabled.Contains("battery", StringComparer.OrdinalIgnoreCase) && !SensorReader.HasSystemBattery())
         {
             s.Sensors.Enabled = s.Sensors.Enabled
                 .Where(x => !x.Equals("battery", StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
-        if (!SensorReader.HasGpu())
+        if (s.Sensors.Enabled.Contains("gpu", StringComparer.OrdinalIgnoreCase) && !SensorReader.HasGpu())
         {
             s.Sensors.Enabled = s.Sensors.Enabled
                 .Where(x => !x.Equals("gpu", StringComparison.OrdinalIgnoreCase))

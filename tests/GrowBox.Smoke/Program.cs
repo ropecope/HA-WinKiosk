@@ -18,5 +18,8 @@ var defaults = new AppSettings();
 Check(defaults.Mqtt.Host == "", "MQTT opt-in");
 Check(!defaults.Sensors.Enabled.Contains("last_active"), "no high-frequency default sensor");
 Check(!defaults.Commands.Enabled.Contains("shutdown"), "no default remote shutdown");
+defaults.Kiosk.PanelProfile = "mycobox";
+defaults.Kiosk.SoftwareRendering = true;
 var roundTrip = SettingsYamlConversion.ToAppSettings(SettingsYamlConversion.FromAppSettings(defaults));
+Check(roundTrip.Kiosk.PanelProfile == "mycobox" && roundTrip.Kiosk.SoftwareRendering, "profile and rendering settings conversion");
 Check(roundTrip.Mqtt.Host == defaults.Mqtt.Host && roundTrip.Mqtt.DeviceName == defaults.Mqtt.DeviceName, "settings conversion");

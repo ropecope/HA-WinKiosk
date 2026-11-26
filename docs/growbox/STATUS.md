@@ -27,5 +27,12 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 - Actual Fusion5 touch behavior, settings gear, native keyboard, WebView2 renderer/browser crash, HA outage and reconnect, MQTT broker restart and device power/sleep. No hardware test yet.
 - Upstream issue #3 remains an OS shell limitation; #5 shell replacement deferred (not appropriate for an untested touch-only device).
 - PIN storage still Base64; MQTT passwords in YAML and transport security need a deliberate design. Do not expose the broker outside the trusted LAN.
-- Full UI localization, configurable box profiles, resource measurements, optional GPU software-rendering mode, watchdog process and branded icon are planned, not complete.
+- Full UI localization, resource measurements, independent watchdog process and branded icon remain planned. Profile selection and optional WebView2 software rendering are implemented; profile-specific dashboard URLs must be entered by the operator. Changes to rendering require restart.
 - No production release published. CI artifacts are previews; install only on a test device after green build.
+
+## Second hardening pass
+- Fixed duplicate instance mutex ownership and taskbar restoration. Wrapped header actions for small displays and added touch keyboard access to settings and PIN dialog.
+- Added saved box profile, explicit profile device-name generation, optional GPU acceleration disable, and bounded local panel.log (256 KiB plus one rotated log). No actual server addresses assumed.
+- HA HTTP reachability checks every 15 s for non-custom profiles; two consecutive failures show offline. This does not prove live WebSocket or sensor freshness. Self-signed HTTPS override skips the native HTTP probe, retaining browser navigation/network checks.
+- MQTT standard telemetry 60 s, optional last-active telemetry 15 s; GPU WMI checks skipped on settings normalization when GPU sensor disabled. Commands ignored if config cannot be loaded.
+- Smoke tests expanded for profile and rendering round-trip. Runtime hardware acceptance remains outstanding.

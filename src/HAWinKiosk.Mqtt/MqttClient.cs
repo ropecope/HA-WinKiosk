@@ -38,7 +38,7 @@ public class MqttClientService : IDisposable
     /// <summary>All binary sensor slugs that may have a retained <c>homeassistant/binary_sensor/.../config</c> topic.</summary>
     private static readonly string[] AllKnownBinarySensorSlugs = ["monitor_on"];
 
-    private const int StandardSensorUpdateIntervalSeconds = 30;
+    private const int StandardSensorUpdateIntervalSeconds = 60;
 
     private static readonly Dictionary<string, string> CommandDisplayNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -241,7 +241,7 @@ public class MqttClientService : IDisposable
 
                     try
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(1), token);
+                        await Task.Delay(TimeSpan.FromSeconds(15), token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -654,13 +654,14 @@ public class MqttClientService : IDisposable
         try
         {
             // A retained command must never replay after restart or resubscription.
-            if (e.ApplicationMessage.Retain) return;
+            if (_disposed || _intentionalShutdown || e.ApplicationMessage.Retain) return;
             var topic = e.ApplicationMessage.Topic ?? "";
             var payload = e.ApplicationMessage.PayloadSegment.Count > 0
                 ? Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment)
                 : "";
 
             _settings = SettingsManager.Load();
+            if (SettingsManager.LastLoadFailed) return;
 
             if (string.Equals(topic.TrimEnd('/'), MqttDiscovery.NavigateTopic(_prefix, _devId), StringComparison.OrdinalIgnoreCase))
             {
