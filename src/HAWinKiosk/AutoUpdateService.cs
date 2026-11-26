@@ -9,7 +9,7 @@ namespace HAWinKiosk;
 
 public static class AutoUpdateService
 {
-    private const string GitHubOwner = "kattcrazy";
+    private const string GitHubOwner = "ropecope";
     private const string GitHubRepo = "HA-WinKiosk";
     private const int UpdateHourLocal = 3;
     private static readonly HttpClient Http = BuildHttpClient();

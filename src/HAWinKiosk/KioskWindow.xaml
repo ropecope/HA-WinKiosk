@@ -5,7 +5,7 @@
         xmlns:local="clr-namespace:HAWinKiosk"
         xmlns:settings="clr-namespace:HAWinKiosk.Settings"
         xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF"
-        Title="HA WinKiosk"
+        Title="GrowBox Panel"
         WindowStyle="None"
         ResizeMode="NoResize"
         Topmost="False"
@@ -205,7 +205,7 @@
                                VerticalAlignment="Center"
                                Margin="0,0,10,0"/>
                     <TextBlock Grid.Column="1"
-                               Text="The current version of HA WinKiosk includes breaking changes. Make sure to check the releases page for any changes required."
+                               Text="The current version of GrowBox Panel includes breaking changes. Make sure to check the releases page for any changes required."
                                FontSize="12"
                                Foreground="{DynamicResource Theme.BreakingChanges.Fg}"
                                TextWrapping="Wrap"
@@ -517,7 +517,7 @@
                                                       Checked="LockdownEnabledToggle_Changed"
                                                       Unchecked="LockdownEnabledToggle_Changed"/>
                                     </Grid>
-                                    <TextBlock Text="When off, HA WinKiosk runs as a normal Windows app (taskbar visible, no kiosk key blocking)."
+                                    <TextBlock Text="When off, GrowBox Panel runs as a normal Windows app (taskbar visible, no kiosk key blocking)."
                                                Style="{StaticResource SettingsHintText}"
                                                Margin="0,0,0,10"/>
 

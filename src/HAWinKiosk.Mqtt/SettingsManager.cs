@@ -15,7 +15,7 @@ public static class SettingsManager
 
     private static readonly string AppDataDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "HA-WinKiosk");
+        "GrowBox-Panel");
 
     private static readonly string SettingsPath = Path.Combine(AppDataDir, "settings.yaml");
 

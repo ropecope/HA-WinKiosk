@@ -43,7 +43,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private readonly bool _hasTouchInput = Tablet.TabletDevices.OfType<TabletDevice>().Any(d => d.Type == TabletDeviceType.Touch);
     private bool _audioUiPopulating;
     private string? _gestureDocumentScriptId;
-    private bool _mainNavigationSucceeded = true;
+    private bool _mainNavigationSucceeded;
+    private bool _openingSettings;
 
     public KioskWindow(bool showSettingsFirst = false, bool previewWebViewError = false)
     {
@@ -1765,6 +1766,14 @@ public partial class KioskWindow : Window, IKioskHostActions
     /// <summary>Opens Settings after optional PIN (gear and secret tap).</summary>
     private void RequestOpenSettings()
     {
+        if (_openingSettings || SettingsPanel.Visibility == Visibility.Visible || _isClosing) return;
+        _openingSettings = true;
+        try { OpenSettingsWithPin(); }
+        finally { _openingSettings = false; }
+    }
+
+    private void OpenSettingsWithPin()
+    {
         _settings = SettingsManager.Load();
         if (!_settings.Kiosk.PinProtectionDisabled && !string.IsNullOrEmpty(_settings.Kiosk.Pin))
         {
@@ -2501,12 +2510,12 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     void IKioskHostActions.OpenSettings()
     {
-        Dispatcher.Invoke(OpenSettingsFromMqtt);
+        _ = Dispatcher.BeginInvoke(new Action(OpenSettingsFromMqtt));
     }
 
     void IKioskHostActions.CloseSettings()
     {
-        Dispatcher.Invoke(ShowKiosk);
+        Dispatcher.Invoke(() => { if (WebView.CoreWebView2 != null && !_openingSettings) ShowKiosk(); });
     }
 
     void IKioskHostActions.NotifySettingsChangedFromMqtt()

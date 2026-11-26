@@ -10,7 +10,7 @@ public static class PinSecretsStore
 {
     private static readonly string StorePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "HA-WinKiosk",
+        "GrowBox-Panel",
         "pin-secrets.json");
 
     public static string FilePath => StorePath;

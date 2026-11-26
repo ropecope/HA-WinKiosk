@@ -66,8 +66,9 @@ public class MqttClientService : IDisposable
     private CancellationTokenSource? _sensorCts;
     private Task? _sensorLoopTask;
     private Task? _lastActiveLoopTask;
-    private bool _disposed;
-    private bool _intentionalShutdown;
+    private volatile bool _disposed;
+    private volatile bool _intentionalShutdown;
+    private readonly CancellationTokenSource _lifetimeCts = new();
     private bool _messageHandlerAttached;
     private readonly SemaphoreSlim _reconnectGate = new(1, 1);
 
@@ -101,7 +102,7 @@ public class MqttClientService : IDisposable
 
         var builder = new MqttClientOptionsBuilder()
             .WithTcpServer(mqtt.Host, mqtt.Port)
-            .WithClientId($"HA-WinKiosk_{_devId}_{Environment.MachineName}")
+            .WithClientId($"GrowBox-Panel_{_devId}_{Environment.MachineName}")
             .WithWillTopic(_availabilityTopic)
             .WithWillPayload(Encoding.UTF8.GetBytes("offline"))
             .WithWillRetain()
@@ -124,40 +125,12 @@ public class MqttClientService : IDisposable
             return Task.CompletedTask;
         };
 
-        Exception? connectErr = null;
-        for (var attempt = 0; attempt < 8; attempt++)
-        {
-            try
-            {
-                await _client.ConnectAsync(_options, ct);
-                connectErr = null;
-                break;
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                connectErr = ex;
-                var sec = Math.Min(60, 1 << Math.Min(attempt, 5));
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(sec), ct);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-            }
-        }
-
-        if (connectErr != null)
-            throw connectErr;
-
-        // First connect: ConnectedAsync may have run before we get here; ensure subscription exists.
-        await EnsureCommandSubscriptionAsync(CancellationToken.None);
+        // Use one connection loop for initial startup and all reconnects.
+        // The kiosk must not wait for an unavailable broker.
+        ct.ThrowIfCancellationRequested();
         StartSensorLoop();
+        _ = Task.Run(TryReconnectLoopAsync);
+        await Task.CompletedTask;
     }
 
     private async Task OnConnectedAsync(MqttClientConnectedEventArgs _)
@@ -206,18 +179,21 @@ public class MqttClientService : IDisposable
                 if (_client.IsConnected)
                     return;
 
-                await Task.Delay(TimeSpan.FromSeconds(Math.Min(60, delaySec)));
+                try { await Task.Delay(TimeSpan.FromSeconds(Math.Min(60, delaySec)), _lifetimeCts.Token); }
+                catch (OperationCanceledException) { return; }
                 delaySec = Math.Min(60, delaySec * 2);
                 if (_disposed || _intentionalShutdown)
                     return;
 
                 try
                 {
-                    await _client.ConnectAsync(_options!, CancellationToken.None);
-                    return;
+                    await _client.ConnectAsync(_options!, _lifetimeCts.Token);
+                    if (_client.IsConnected) return;
                 }
-                catch
+                catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested) { return; }
+                catch (Exception ex)
                 {
+                    Error?.Invoke(this, ex);
                     // keep backing off until success or shutdown
                 }
             }
@@ -845,6 +821,8 @@ public class MqttClientService : IDisposable
     {
         if (_disposed) return;
         _intentionalShutdown = true;
+        _disposed = true;
+        _lifetimeCts.Cancel();
         try
         {
             _sensorCts?.Cancel();
@@ -853,15 +831,7 @@ public class MqttClientService : IDisposable
         catch { /* ignore */ }
 
         _client?.Dispose();
-        _disposed = true;
-        try
-        {
-            _reconnectGate.Dispose();
-        }
-        catch
-        {
-            // ignore
-        }
+        // A reconnect task may still hold the semaphore; do not dispose it underneath it.
 
         GC.SuppressFinalize(this);
     }

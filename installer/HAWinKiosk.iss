@@ -1,11 +1,11 @@
-#define MyAppName "HA WinKiosk"
-#define MyAppPublisher "HA WinKiosk"
-#define MyAppURL "https://github.com/kattcrazy/HA-WinKiosk"
+#define MyAppName "GrowBox Panel"
+#define MyAppPublisher "GrowBox Panel"
+#define MyAppURL "https://github.com/ropecope/HA-WinKiosk"
 #define MyAppExeName "HAWinKiosk.exe"
 #define MyAppVersion "3.30.2"
 
 [Setup]
-AppId={{7E91D8B9-4E5A-4B6B-B3A6-4F89B7A5E2F2}
+AppId={{B4730DF5-6F27-41F0-A1F2-44CB55EB7249}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -13,7 +13,7 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 ; Per-user install (no admin / UAC). Matches self-contained publish output from tools\Build-ExeFromGDrive.ps1.
-DefaultDirName={localappdata}\Programs\HA WinKiosk
+DefaultDirName={localappdata}\Programs\GrowBox Panel
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
@@ -47,4 +47,4 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{userappdata}\HA-WinKiosk"
+Type: filesandordirs; Name: "{userappdata}\GrowBox-Panel"

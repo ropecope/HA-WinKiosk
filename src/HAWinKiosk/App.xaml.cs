@@ -6,7 +6,7 @@ namespace HAWinKiosk;
 
 public partial class App : System.Windows.Application
 {
-    private const string SingleInstanceMutexName = "HA-WinKiosk-SingleInstance";
+    private const string SingleInstanceMutexName = "GrowBox-Panel-SingleInstance";
     private Mutex? _singleInstanceMutex;
 
     private void Application_Startup(object sender, StartupEventArgs e)

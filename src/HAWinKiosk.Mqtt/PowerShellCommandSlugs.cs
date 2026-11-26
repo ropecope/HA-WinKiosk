@@ -11,7 +11,7 @@ public static class PowerShellCommandSlugs
 {
     private static readonly string CachePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "HA-WinKiosk",
+        "GrowBox-Panel",
         "mqtt-ps-button-slugs.json");
 
     public readonly record struct Entry(string Slug, string DisplayName, string Command);

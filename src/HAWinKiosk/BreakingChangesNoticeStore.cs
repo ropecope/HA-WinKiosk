@@ -8,7 +8,7 @@ internal static class BreakingChangesNoticeStore
 {
     private static readonly string StorePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "HA-WinKiosk",
+        "GrowBox-Panel",
         "breaking-changes-notice.json");
 
     private static readonly TimeSpan ShowDuration = TimeSpan.FromHours(24);

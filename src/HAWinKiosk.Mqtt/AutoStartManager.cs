@@ -6,8 +6,8 @@ namespace HAWinKiosk.Mqtt;
 public static class AutoStartManager
 {
     private const string KeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string ValueName = "HA-WinKiosk";
-    private const string LegacyTaskName = "HA-WinKiosk-AutoStart";
+    private const string ValueName = "GrowBox-Panel";
+    private const string LegacyTaskName = "GrowBox-Panel-AutoStart";
 
     public static bool IsEnabled
     {
