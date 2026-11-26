@@ -4,7 +4,7 @@ using System.Windows.Media;
 
 namespace HAWinKiosk;
 
-/// <summary>App UI colours - light swatches are canonical; dark surfaces are derived from them.</summary>
+/// <summary>App UI colours with explicit readable light and dark surfaces.</summary>
 public static class ThemePalette
 {
     // Accents
@@ -38,29 +38,37 @@ public static class ThemePalette
         void Set(string key, System.Windows.Media.Color color) => resources[key] = B(color);
 
         // Light: panel -> card -> input uses shade 2 -> shade 1 -> lightest surface (#F2F4F9).
-        // Dark: panel -> card -> input uses darkest surface (#171B21) then steps upward toward #F2F4F9.
-        var (darkPanel, darkSurface, darkInput) = BuildDarkSurfaces();
+        // Dark: explicit panel, card and input surfaces with contrasting borders.
+        var darkPanel = SurfaceDarkest;
+        var darkSurface = Rgb(0x24, 0x2B, 0x34);
+        var darkInput = Rgb(0x30, 0x39, 0x45);
 
         var panel = dark ? darkPanel : LightShade2;
         var surface = dark ? darkSurface : LightShade1;
-        var border = dark ? darkPanel : LightShade2;
+        var border = dark ? Rgb(0x5F, 0x70, 0x82) : LightShade2;
         var fg = dark ? SurfaceLightest : SurfaceDarkest;
         var fgMuted = dark ? LightShade2 : SurfaceDarkest;
         var fgSub = fgMuted;
         var input = dark ? darkInput : SurfaceLightest;
-        var inputBorder = dark ? darkPanel : LightShade2;
+        var inputBorder = dark ? Rgb(0x7B, 0x8B, 0x9D) : Rgb(0x78, 0x87, 0x99);
         var inputFg = dark ? SurfaceLightest : SurfaceDarkest;
         var disabledTrack = dark ? darkPanel : LightShade2;
         var disabledThumb = AccentPale;
-        var thumbOff = dark ? darkInput : SurfaceLightest;
+        var thumbOff = SurfaceLightest;
         var breakingChangesBg = dark ? Lerp(darkSurface, Accent, 0.22) : AccentPale;
         var breakingChangesFg = dark ? SurfaceLightest : SurfaceDarkest;
-        var breakingChangesIcon = dark ? AccentMedium : Accent;
+        var breakingChangesIcon = dark ? AccentMedium : Rgb(0x20, 0x51, 0xA2);
 
         Set("Theme.Accent", Accent);
         Set("Theme.Accent.Light", AccentMedium);
         Set("Theme.Accent.Pale", AccentPale);
-        Set("Theme.Accent.Fg", SurfaceLightest);
+        Set("Theme.Accent.Fg", SurfaceDarkest);
+        Set("Theme.Section.Bg", dark ? Rgb(0x35, 0x4A, 0x60) : AccentPale);
+        Set("Theme.Section.HoverBg", dark ? Rgb(0x40, 0x56, 0x6C) : AccentMedium);
+        Set("Theme.Section.Fg", fg);
+        Set("Theme.Selection.Bg", dark ? Rgb(0x41, 0x57, 0x70) : AccentPale);
+        Set("Theme.Selection.Fg", fg);
+        Set("Theme.Error.Fg", dark ? Rgb(0xFF, 0xA8, 0xA8) : Rgb(0x9B, 0x18, 0x18));
 
         Set("Theme.Kiosk.Bg", panel);
         Set("Theme.Kiosk.SettingsButtonBg", Accent);
@@ -78,10 +86,10 @@ public static class ThemePalette
         Set("Theme.Button.SecondaryBg", input);
         Set("Theme.Button.SecondaryFg", inputFg);
         Set("Theme.Button.SecondaryBorder", inputBorder);
-        Set("Theme.Toggle.TrackOff", border);
+        Set("Theme.Toggle.TrackOff", dark ? Rgb(0x58, 0x68, 0x79) : Rgb(0x78, 0x87, 0x99));
         Set("Theme.Toggle.ThumbOff", thumbOff);
         Set("Theme.Toggle.TrackOn", Accent);
-        Set("Theme.Toggle.ThumbOn", AccentMedium);
+        Set("Theme.Toggle.ThumbOn", SurfaceDarkest);
         Set("Theme.Toggle.DisabledTrack", disabledTrack);
         Set("Theme.Toggle.DisabledThumb", disabledThumb);
         Set("Theme.Pin.CardBg", surface);
@@ -89,7 +97,7 @@ public static class ThemePalette
         Set("Theme.Pin.Fg", fg);
         Set("Theme.Pin.FgMuted", fgMuted);
         Set("Theme.SecretInput.EyeMuted", fgMuted);
-        Set("Theme.SecretInput.EyeActive", Accent);
+        Set("Theme.SecretInput.EyeActive", dark ? AccentMedium : Rgb(0x20, 0x51, 0xA2));
         Set("Theme.BreakingChanges.Bg", breakingChangesBg);
         Set("Theme.BreakingChanges.Border", Accent);
         Set("Theme.BreakingChanges.Fg", breakingChangesFg);
@@ -98,24 +106,6 @@ public static class ThemePalette
 
     public static void ApplyAppWide(bool dark) => Apply(System.Windows.Application.Current.Resources, dark);
 
-    /// <summary>
-    /// Derive dark panel/card/input from light surface spacing.
-    /// Panel is always <see cref="SurfaceDarkest"/> (#171B21); card and input step toward <see cref="SurfaceLightest"/>.
-    /// </summary>
-    private static (System.Windows.Media.Color panel, System.Windows.Media.Color surface, System.Windows.Media.Color input) BuildDarkSurfaces()
-    {
-        const double cardStep = 0.5; // mid rung between panel and input (mirrors shade 1 on shade 2)
-
-        var lightSpan = LStar(SurfaceLightest) - LStar(LightShade2);
-        var paletteSpan = LStar(SurfaceLightest) - LStar(SurfaceDarkest);
-        var darkMaxT = lightSpan / paletteSpan;
-
-        return (
-            SurfaceDarkest,
-            Lerp(SurfaceDarkest, SurfaceLightest, cardStep * darkMaxT),
-            Lerp(SurfaceDarkest, SurfaceLightest, darkMaxT));
-    }
-
     private static System.Windows.Media.Color Lerp(System.Windows.Media.Color from, System.Windows.Media.Color to, double t)
     {
         t = Math.Clamp(t, 0, 1);
@@ -123,23 +113,6 @@ public static class ThemePalette
             (byte)Math.Round(from.R + (to.R - from.R) * t),
             (byte)Math.Round(from.G + (to.G - from.G) * t),
             (byte)Math.Round(from.B + (to.B - from.B) * t));
-    }
-
-    private static double LStar(System.Windows.Media.Color c)
-    {
-        var y = RelativeLuminance(c);
-        return y <= 0.008856 ? 903.3 * y : 116 * Math.Pow(y, 1.0 / 3.0) - 16;
-    }
-
-    private static double RelativeLuminance(System.Windows.Media.Color c)
-    {
-        static double Linearize(byte channel)
-        {
-            var v = channel / 255.0;
-            return v <= 0.04045 ? v / 12.92 : Math.Pow((v + 0.055) / 1.055, 2.4);
-        }
-
-        return 0.2126 * Linearize(c.R) + 0.7152 * Linearize(c.G) + 0.0722 * Linearize(c.B);
     }
 
     private static System.Windows.Media.Color Rgb(byte r, byte g, byte b) => System.Windows.Media.Color.FromRgb(r, g, b);

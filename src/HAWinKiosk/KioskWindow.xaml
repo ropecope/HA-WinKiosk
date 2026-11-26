@@ -252,7 +252,7 @@
             </Border>
         </Popup>
 
-        <Grid x:Name="SettingsPanel"
+        <Grid x:Name="SettingsPanel" TextElement.Foreground="{DynamicResource Theme.Settings.Fg}"
               Background="{DynamicResource Theme.Settings.PanelBg}"
               Visibility="Collapsed"
               Panel.ZIndex="1000">

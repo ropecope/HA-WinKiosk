@@ -45,3 +45,6 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 - Local frame differences at 2 samples/s, requested 320×240 capture, downsampled to 160×120. No JPEG encoding, image storage, streaming or face recognition in this mode.
 - Motion, input and open settings extend the display timeout. Windows execution state keeps the system awake while monitoring, and is released on disable/exit. If frames stop, the panel releases the override and attempts to wake any display it switched off.
 - Motion is not proof of human presence; stationary people may time out, fans/light changes may cause false triggers. Camera ID-to-OpenCV-index mapping and wake/sleep behavior must be verified on the two-camera Fusion5. No production acceptance yet.
+
+## Readability correction
+- Fixed nearly white section text on pale blue dark-mode backgrounds. Explicit dark surfaces, contrasting borders, dark text on blue action buttons, consistent drop-down selected/hover states, checkbox text, PIN error colors and Segoe UI. Theme choice and functionality unchanged. Verify live on Fusion5 at native scaling, including dropdowns, PIN and both themes. No Home Assistant dashboard theme changes.

@@ -5,9 +5,9 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF"
              Startup="Application_Startup">
     <Application.Resources>
-        <FontFamily x:Key="RalewayFamily">pack://application:,,,/Fonts/Raleway-VariableFont_wght.ttf#Raleway, Segoe UI</FontFamily>
+        <FontFamily x:Key="RalewayFamily">Segoe UI</FontFamily>
         <Style TargetType="Window">
-            <Setter Property="FontFamily" Value="{StaticResource RalewayFamily}"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
         </Style>
         <!-- Slight rounding: 6px -->
         <CornerRadius x:Key="UiCornerRadius">6</CornerRadius>
@@ -15,7 +15,13 @@
         <SolidColorBrush x:Key="Theme.Accent" Color="#5993F6"/>
         <SolidColorBrush x:Key="Theme.Accent.Light" Color="#87BBFF"/>
         <SolidColorBrush x:Key="Theme.Accent.Pale" Color="#C1DEFF"/>
-        <SolidColorBrush x:Key="Theme.Accent.Fg" Color="#F2F4F9"/>
+        <SolidColorBrush x:Key="Theme.Accent.Fg" Color="#171B21"/>
+        <SolidColorBrush x:Key="Theme.Section.Bg" Color="#C1DEFF"/>
+        <SolidColorBrush x:Key="Theme.Section.HoverBg" Color="#87BBFF"/>
+        <SolidColorBrush x:Key="Theme.Section.Fg" Color="#171B21"/>
+        <SolidColorBrush x:Key="Theme.Selection.Bg" Color="#C1DEFF"/>
+        <SolidColorBrush x:Key="Theme.Selection.Fg" Color="#171B21"/>
+        <SolidColorBrush x:Key="Theme.Error.Fg" Color="#9B1818"/>
         <SolidColorBrush x:Key="Theme.Settings.Fg" Color="#171B21"/>
         <SolidColorBrush x:Key="Theme.Settings.FgMuted" Color="#171B21"/>
         <SolidColorBrush x:Key="Theme.Settings.InputBg" Color="#F2F4F9"/>
@@ -67,6 +73,8 @@
             <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.InputFg}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Theme.Settings.InputBorder}"/>
             <Setter Property="CaretBrush" Value="{DynamicResource Theme.Settings.InputFg}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource Theme.Selection.Bg}"/>
+            <Setter Property="SelectionTextBrush" Value="{DynamicResource Theme.Selection.Fg}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
@@ -107,6 +115,29 @@
                         <Setter Property="Background" Value="{DynamicResource Theme.Settings.InputBg}"/>
                         <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.InputFg}"/>
                         <Setter Property="Padding" Value="10,8"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="ItemSurface" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter ContentSource="Content" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource Theme.Selection.Bg}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Theme.Selection.Fg}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource Theme.Selection.Bg}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Theme.Selection.Fg}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.FgMuted}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
                 </Setter.Value>
             </Setter>
@@ -199,6 +230,8 @@
             <Setter Property="BorderBrush" Value="{DynamicResource Theme.Settings.InputBorder}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CaretBrush" Value="{DynamicResource Theme.Settings.InputFg}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource Theme.Selection.Bg}"/>
+            <Setter Property="SelectionTextBrush" Value="{DynamicResource Theme.Selection.Fg}"/>
             <Setter Property="PasswordChar" Value="*"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
@@ -316,6 +349,11 @@
             </Setter>
         </Style>
 
+        <Style TargetType="Button" BasedOn="{StaticResource SecondaryActionButton}"/>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.Fg}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
         <!-- Collapsible settings section: header + chevron affordance -->
         <Style TargetType="settings:SettingsSection">
             <Setter Property="Background" Value="Transparent"/>
@@ -336,7 +374,7 @@
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
                                         <Border x:Name="ToggleChrome"
-                                                Background="{DynamicResource Theme.Accent.Pale}"
+                                                Background="{DynamicResource Theme.Section.Bg}"
                                                 CornerRadius="6"
                                                 Padding="{TemplateBinding Padding}">
                                             <Grid>
@@ -348,7 +386,7 @@
                                                            Text="{Binding Header, RelativeSource={RelativeSource AncestorType=settings:SettingsSection}}"
                                                            FontSize="16"
                                                            FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource Theme.Settings.Fg}"
+                                                           Foreground="{DynamicResource Theme.Section.Fg}"
                                                            TextWrapping="Wrap"
                                                            VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon x:Name="ChevronIcon"
@@ -358,12 +396,12 @@
                                                                             Height="20"
                                                                             Margin="8,0,0,0"
                                                                             VerticalAlignment="Center"
-                                                                            Foreground="{DynamicResource Theme.Settings.FgMuted}"/>
+                                                                            Foreground="{DynamicResource Theme.Section.Fg}"/>
                                             </Grid>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="ToggleChrome" Property="Background" Value="{DynamicResource Theme.Accent.Light}"/>
+                                                <Setter TargetName="ToggleChrome" Property="Background" Value="{DynamicResource Theme.Section.HoverBg}"/>
                                             </Trigger>
                                             <Trigger Property="IsChecked" Value="True">
                                                 <Setter TargetName="ChevronIcon" Property="Kind" Value="ChevronDown"/>

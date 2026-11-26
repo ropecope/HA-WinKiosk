@@ -46,17 +46,17 @@
                                       TextChanged="PinBox_TextChanged"/>
             <TextBlock x:Name="ErrorBlock"
                        Text="Incorrect PIN"
-                       Foreground="#B71C1C"
+                       Foreground="{DynamicResource Theme.Error.Fg}"
                        FontSize="12"
                        Margin="0,0,0,12"
                        Visibility="Collapsed"/>
             <TextBlock x:Name="ErrorWithResetBlock"
-                       Foreground="#B71C1C"
+                       Foreground="{DynamicResource Theme.Error.Fg}"
                        FontSize="12"
                        Margin="0,0,0,12"
                        Visibility="Collapsed">
                 <Run Text="Incorrect PIN - "/>
-                <Hyperlink Click="ResetPinLink_Click">
+                <Hyperlink Foreground="{DynamicResource Theme.Error.Fg}" Click="ResetPinLink_Click">
                     <Run Text="reset pin?"/>
                 </Hyperlink>
             </TextBlock>
