@@ -8,3 +8,5 @@
 - UI must be operable with touch only, including recovery and exit. Do not treat kiosk mode as an OS security boundary. HA owns all process control.
 - Test on Windows 10 x64 / 2 GB RAM and modern Windows; verify startup, missing runtime, network outage, MQTT, exit and restart. Do not claim hardware tests without evidence.
 - Record changes and limitations in docs/growbox/STATUS.md. Prefer conservative defaults and explicit opt-in for remote system commands.
+
+- Do not add new features or settings without the owner's explicit agreement. Keep the original settings layout and HA login flow unless a requested change requires otherwise.

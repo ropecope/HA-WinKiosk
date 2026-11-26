@@ -766,7 +766,6 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void PopulateSettingsForm()
     {
         UrlBox.Text = _settings.Kiosk.Url ?? "";
-        SelectComboByTag(PanelProfileCombo, _settings.Kiosk.PanelProfile);
         SoftwareRenderingToggle.IsChecked = _settings.Kiosk.SoftwareRendering;
         DoNotDisturbToggle.IsChecked = _settings.Kiosk.DoNotDisturbEnabled;
         IgnoreCertificateErrorsToggle.IsChecked = _settings.Kiosk.IgnoreCertificateErrors;
@@ -1587,7 +1586,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         if (_isClosing || SettingsPanel.Visibility == Visibility.Visible || _healthProbeRunning) return;
         if (_navigationFailed) { RetryFailedNavigation(); return; }
-        if (_settings.Kiosk.PanelProfile == "custom" || WebView.CoreWebView2 == null
+        if (WebView.CoreWebView2 == null
             || !KioskUrlPolicy.IsSameOrigin(_settings.Kiosk.Url, WebView.CoreWebView2.Source)) return;
         _healthProbeRunning = true;
         try
@@ -1710,12 +1709,6 @@ public partial class KioskWindow : Window, IKioskHostActions
         UpdateStatusPopup.Visibility = Visibility.Visible;
         ComponentProgress.IsIndeterminate = busy;
         ComponentProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    private void ApplyProfileName_Click(object sender, RoutedEventArgs e)
-    {
-        var profile = SelectedTag(PanelProfileCombo, "custom");
-        if (profile != "custom") DeviceNameBox.Text = $"{profile}-panel-{Environment.MachineName}";
     }
 
     private async Task TryInjectGestureScriptIntoMainAsync()
@@ -2056,7 +2049,6 @@ public partial class KioskWindow : Window, IKioskHostActions
         var disk = SettingsManager.Load();
 
         _settings.Kiosk.Url = NormalizeNavigableUrl(UrlBox.Text);
-        _settings.Kiosk.PanelProfile = SelectedTag(PanelProfileCombo, "custom");
         _settings.Kiosk.SoftwareRendering = SoftwareRenderingToggle.IsChecked == true;
         _settings.Kiosk.DoNotDisturbEnabled = DoNotDisturbToggle.IsChecked == true;
         _settings.Kiosk.IgnoreCertificateErrors = IgnoreCertificateErrorsToggle.IsChecked == true;

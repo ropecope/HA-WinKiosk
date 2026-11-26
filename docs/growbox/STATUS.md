@@ -32,8 +32,8 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 
 ## Second hardening pass
 - Fixed duplicate instance mutex ownership and taskbar restoration. Wrapped header actions for small displays and added touch keyboard access to settings and PIN dialog.
-- Added saved box profile, explicit profile device-name generation, optional GPU acceleration disable, and bounded local panel.log (256 KiB plus one rotated log). No actual server addresses assumed.
-- HA HTTP reachability checks every 15 s for non-custom profiles; two consecutive failures show offline. This does not prove live WebSocket or sensor freshness. Self-signed HTTPS override skips the native HTTP probe, retaining browser navigation/network checks.
+- Added optional GPU acceleration disable and bounded local panel.log (256 KiB plus one rotated log). Box profiles and profile-generated names were removed at the user's request. No actual server addresses assumed.
+- HA HTTP reachability checks every 15 s for the configured HA URL; two consecutive failures show offline. This does not prove live WebSocket or sensor freshness. Self-signed HTTPS override skips the native HTTP probe, retaining browser navigation/network checks.
 - MQTT standard telemetry 60 s, optional last-active telemetry 15 s; GPU WMI checks skipped on settings normalization when GPU sensor disabled. Commands ignored if config cannot be loaded.
 - Smoke tests expanded for profile and rendering round-trip. Runtime hardware acceptance remains outstanding.
 
@@ -48,3 +48,7 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 
 ## Readability correction
 - Fixed nearly white section text on pale blue dark-mode backgrounds. Explicit dark surfaces, contrasting borders, dark text on blue action buttons, consistent drop-down selected/hover states, checkbox text, PIN error colors and Segoe UI. Theme choice and functionality unchanged. Verify live on Fusion5 at native scaling, including dropdowns, PIN and both themes. No Home Assistant dashboard theme changes.
+
+## Owner feedback: simple HA login
+- Removed panel profiles and automatic profile naming from UI, model and YAML conversion. Unknown legacy YAML properties are ignored by the existing deserializer. Existing URL, device name and credentials are not reset. Existing HA reachability check now uses the configured URL without a profile gate.
+- Display retains the original Auto/Light/Dark selector. Dark text inputs, section headers and selected options use neutral gray rather than blue. No new theme selector. Only requested corrections; no new functions without owner approval.

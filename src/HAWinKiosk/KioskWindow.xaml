@@ -368,15 +368,6 @@
 
                             <StackPanel Grid.Column="0">
                                 <settings:SettingsSection Header="Kiosk">
-                                    <TextBlock Text="Panel profile" Style="{StaticResource SettingsItemLabel}"/>
-                                    <ComboBox x:Name="PanelProfileCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,8">
-                                        <ComboBoxItem Content="GrowBox" Tag="growbox"/>
-                                        <ComboBoxItem Content="MycoBox" Tag="mycobox"/>
-                                        <ComboBoxItem Content="GreenBox" Tag="greenbox"/>
-                                        <ComboBoxItem Content="Central panel" Tag="central"/>
-                                        <ComboBoxItem Content="Custom" Tag="custom"/>
-                                    </ComboBox>
-                                    <Button Content="Apply profile device name" Margin="0,0,0,10" MinHeight="40" Click="ApplyProfileName_Click"/>
                                     <TextBlock Text="Kiosk URL" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBox x:Name="UrlBox" Text="http://homeassistant.local:8123" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
 

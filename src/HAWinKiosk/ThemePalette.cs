@@ -41,7 +41,7 @@ public static class ThemePalette
         // Dark: explicit panel, card and input surfaces with contrasting borders.
         var darkPanel = SurfaceDarkest;
         var darkSurface = Rgb(0x24, 0x2B, 0x34);
-        var darkInput = Rgb(0x30, 0x39, 0x45);
+        var darkInput = Rgb(0x30, 0x30, 0x30);
 
         var panel = dark ? darkPanel : LightShade2;
         var surface = dark ? darkSurface : LightShade1;
@@ -63,10 +63,10 @@ public static class ThemePalette
         Set("Theme.Accent.Light", AccentMedium);
         Set("Theme.Accent.Pale", AccentPale);
         Set("Theme.Accent.Fg", SurfaceDarkest);
-        Set("Theme.Section.Bg", dark ? Rgb(0x35, 0x4A, 0x60) : AccentPale);
-        Set("Theme.Section.HoverBg", dark ? Rgb(0x40, 0x56, 0x6C) : AccentMedium);
+        Set("Theme.Section.Bg", dark ? Rgb(0x35, 0x35, 0x35) : AccentPale);
+        Set("Theme.Section.HoverBg", dark ? Rgb(0x45, 0x45, 0x45) : AccentMedium);
         Set("Theme.Section.Fg", fg);
-        Set("Theme.Selection.Bg", dark ? Rgb(0x41, 0x57, 0x70) : AccentPale);
+        Set("Theme.Selection.Bg", dark ? Rgb(0x50, 0x50, 0x50) : AccentPale);
         Set("Theme.Selection.Fg", fg);
         Set("Theme.Error.Fg", dark ? Rgb(0xFF, 0xA8, 0xA8) : Rgb(0x9B, 0x18, 0x18));
 

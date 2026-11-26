@@ -32,9 +32,6 @@ public class KioskConfig
     [YamlMember(Alias = "url")]
     public string Url { get; set; } = "http://homeassistant.local:8123";
 
-    [YamlMember(Alias = "panelProfile")]
-    public string PanelProfile { get; set; } = "custom";
-
     [YamlMember(Alias = "softwareRendering")]
     public bool SoftwareRendering { get; set; }
 

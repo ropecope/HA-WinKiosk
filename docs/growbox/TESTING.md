@@ -4,7 +4,7 @@
 Use only a successful run for the growbox branch under GitHub Actions. Download GrowBox-Panel-preview-installer. It installs alongside upstream HA-WinKiosk, with separate settings and autostart identity. It is unsigned and intended for testing, not production. WebView2 Evergreen Runtime is required; installer detects the existing runtime and, if missing, offers installation using the bundled Microsoft-signed online bootstrapper. Portable first launch also checks and offers installation; Settings > Check components retries. For offline devices install the official x64 Evergreen Standalone Runtime before running setup. No automatic updates.
 
 ## First launch
-Select a box profile, enter the actual HA dashboard URL, optionally apply the profile device name. MQTT is optional; enter the broker and credentials only locally. Keep the gear visible and leave power commands disabled until verified. Save. To use software rendering, toggle Disable GPU acceleration and restart the app. Configuration is under %APPDATA%\GrowBox-Panel. Diagnostics: panel.log.
+Enter the actual HA URL and sign in using Home Assistant. Set the existing device name only if needed. MQTT is optional; enter the broker and credentials only locally. Keep the gear visible and leave power commands disabled until verified. Save. To use software rendering, toggle Disable GPU acceleration and restart the app. Configuration is under %APPDATA%\GrowBox-Panel. Diagnostics: panel.log.
 
 ## Required hands-on tests
 - First launch without physical keyboard; change default URL, save, close and reopen, verify configuration.
