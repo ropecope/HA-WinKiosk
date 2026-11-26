@@ -155,7 +155,7 @@ public static class SettingsManager
         var cam = s.Sensors.CameraStream;
         var mode = (cam.Mode ?? "off").Trim().ToLowerInvariant();
         // Legacy "ha" (MQTT camera entity) remaps to off; only off | mjpeg remain.
-        var normalizedMode = mode is "mjpeg" or "motion" ? mode : "off";
+        var normalizedMode = mode is "mjpeg" or "motion" or "presence" ? mode : "off";
         var cameraMigrated = !string.Equals(cam.Mode, normalizedMode, StringComparison.OrdinalIgnoreCase)
             || mode is "ha";
         cam.Mode = normalizedMode;

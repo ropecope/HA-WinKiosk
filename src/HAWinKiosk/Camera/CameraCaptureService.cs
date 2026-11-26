@@ -38,7 +38,7 @@ public sealed class CameraCaptureService : IDisposable
         {
             var viaSelector = await DeviceInformation.FindAllAsync(MediaDevice.GetVideoCaptureSelector());
             if (viaSelector.Count > 0)
-                return viaSelector.Select(d => (d.Id, string.IsNullOrWhiteSpace(d.Name) ? d.Id : d.Name)).ToList();
+                return viaSelector.Select(d => (d.Id, CameraLabel(d))).ToList();
         }
         catch
         {
@@ -46,7 +46,18 @@ public sealed class CameraCaptureService : IDisposable
         }
 
         var devices = await DeviceInformation.FindAllAsync(DeviceClass.VideoCapture);
-        return devices.Select(d => (d.Id, string.IsNullOrWhiteSpace(d.Name) ? d.Id : d.Name)).ToList();
+        return devices.Select(d => (d.Id, CameraLabel(d))).ToList();
+    }
+
+    private static string CameraLabel(DeviceInformation device)
+    {
+        var name = string.IsNullOrWhiteSpace(device.Name) ? device.Id : device.Name;
+        return name + (device.EnclosureLocation?.Panel switch
+        {
+            Windows.Devices.Enumeration.Panel.Front => " (front)",
+            Windows.Devices.Enumeration.Panel.Back => " (rear)",
+            _ => ""
+        });
     }
 
     public async Task StartAsync(string? deviceId, int fps, bool localMotion = false, int sensitivity = 50)

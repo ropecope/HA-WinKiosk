@@ -13,6 +13,7 @@ public sealed class CameraStreamCoordinator : IDisposable
         "camera.log");
 
     private readonly CameraCaptureService _capture = new();
+    private readonly NativePresenceCapture _presence = new();
     private readonly MjpegHttpServer _mjpeg = new();
     private MqttClientService? _mqtt;
     private string _mode = "off";
@@ -21,9 +22,9 @@ public sealed class CameraStreamCoordinator : IDisposable
     private string? _deviceId;
     private bool _disposed;
     private int _motionSensitivity = 50;
-    public bool MotionActive => _mode == "motion";
-    public long LastFrameTicks => _capture.LastFrameTicks;
-    public long LastMotionTicks => _capture.LastMotionTicks;
+    public bool MotionActive => _mode is "motion" or "presence";
+    public long LastFrameTicks => _mode == "presence" ? _presence.LastFrameTicks : _capture.LastFrameTicks;
+    public long LastMotionTicks => _mode == "presence" ? _presence.LastPresenceTicks : _capture.LastMotionTicks;
 
     public CameraStreamCoordinator()
     {
@@ -37,7 +38,7 @@ public sealed class CameraStreamCoordinator : IDisposable
     {
         _mqtt = mqtt;
         var mode = (settings.Sensors.CameraStream.Mode ?? "off").Trim().ToLowerInvariant();
-        if (mode is not ("mjpeg" or "motion"))
+        if (mode is not ("mjpeg" or "motion" or "presence"))
             mode = "off";
         var fps = Math.Clamp(settings.Sensors.CameraStream.Fps, 1, 15);
         var port = Math.Clamp(settings.Sensors.CameraStream.Port <= 0 ? 8081 : settings.Sensors.CameraStream.Port, 1, 65535);
@@ -45,7 +46,7 @@ public sealed class CameraStreamCoordinator : IDisposable
             ? null
             : settings.Kiosk.CameraDeviceId.Trim();
 
-        if (mode == "motion")
+        if (mode is "motion" or "presence")
         {
             var sensitivity = Math.Clamp(settings.Sensors.CameraStream.MotionSensitivity, 1, 100);
             if (mode == _mode && sensitivity == _motionSensitivity && string.Equals(deviceId, _deviceId, StringComparison.Ordinal)) return;
@@ -56,8 +57,9 @@ public sealed class CameraStreamCoordinator : IDisposable
             try
             {
                 if (string.IsNullOrWhiteSpace(deviceId)) throw new InvalidOperationException("Select a specific camera for motion wake.");
-                await _capture.StartAsync(deviceId, 2, localMotion: true, sensitivity: sensitivity);
-                _mode = "motion";
+                if (mode == "presence") await _presence.StartAsync(deviceId, sensitivity);
+                else await _capture.StartAsync(deviceId, 2, localMotion: true, sensitivity: sensitivity);
+                _mode = mode;
             }
             catch { StopRuntime(); throw; }
             await ClearMqttCameraDiscoveryAsync();
@@ -143,6 +145,7 @@ public sealed class CameraStreamCoordinator : IDisposable
 
     private void StopRuntime()
     {
+        _presence.Stop();
         _capture.Stop();
         _mjpeg.Stop();
     }

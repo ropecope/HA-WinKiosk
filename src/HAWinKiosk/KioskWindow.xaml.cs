@@ -622,7 +622,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
 
         var mode = (_settings.Sensors.CameraStream.Mode ?? "off").Trim().ToLowerInvariant();
-        SelectComboByTag(CameraStreamModeSelect.ComboBox, mode is "mjpeg" or "motion" ? mode : "off");
+        SelectComboByTag(CameraStreamModeSelect.ComboBox, mode is "mjpeg" or "motion" or "presence" ? mode : "off");
         MotionHoldSlider.Value = Math.Clamp(_settings.Sensors.CameraStream.MotionHoldMinutes, 1, 60);
         MotionSensitivitySlider.Value = Math.Clamp(_settings.Sensors.CameraStream.MotionSensitivity, 1, 100);
         CameraFpsSlider.Value = Math.Clamp(_settings.Sensors.CameraStream.Fps, 1, 15);
@@ -646,7 +646,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             mode = tag.Trim().ToLowerInvariant();
 
         CameraStreamOptionsPanel.Visibility = mode == "mjpeg" ? Visibility.Visible : Visibility.Collapsed;
-        if (MotionWakeOptionsPanel != null) MotionWakeOptionsPanel.Visibility = mode == "motion" ? Visibility.Visible : Visibility.Collapsed;
+        if (MotionWakeOptionsPanel != null) MotionWakeOptionsPanel.Visibility = mode is "motion" or "presence" ? Visibility.Visible : Visibility.Collapsed;
         if (CameraMjpegOptionsPanel != null)
             CameraMjpegOptionsPanel.Visibility = mode == "mjpeg" ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -1928,7 +1928,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     private async Task SaveSettingsAndReturnAsync()
     {
         ApplyFormToSettings();
-        if (_settings.Sensors.CameraStream.Mode == "motion" && string.IsNullOrWhiteSpace(_settings.Kiosk.CameraDeviceId))
+        if ((_settings.Sensors.CameraStream.Mode is "motion" or "presence") && string.IsNullOrWhiteSpace(_settings.Kiosk.CameraDeviceId))
         {
             ShowUpdateStatusPopup("Select the front camera explicitly for motion wake.");
             return;
@@ -2151,7 +2151,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             var camMode = "off";
             if (CameraStreamModeSelect.SelectedItem is ComboBoxItem modeItem && modeItem.Tag is string modeTag)
                 camMode = modeTag.Trim().ToLowerInvariant();
-            _settings.Sensors.CameraStream.Mode = camMode is "mjpeg" or "motion" ? camMode : "off";
+            _settings.Sensors.CameraStream.Mode = camMode is "mjpeg" or "motion" or "presence" ? camMode : "off";
             _settings.Sensors.CameraStream.MotionHoldMinutes = Math.Clamp((int)Math.Round(MotionHoldSlider.Value), 1, 60);
             _settings.Sensors.CameraStream.MotionSensitivity = Math.Clamp((int)Math.Round(MotionSensitivitySlider.Value), 1, 100);
             if (camMode == "mjpeg")
