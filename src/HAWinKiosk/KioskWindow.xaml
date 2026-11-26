@@ -340,15 +340,18 @@
                                         Grid.ColumnSpan="2"
                                         Margin="0,12,0,0"
                                         Padding="12,8"
-                                        HorizontalAlignment="Right"
+                                        HorizontalAlignment="Stretch"
                                         Background="{DynamicResource Theme.Settings.CardBg}"
                                         BorderBrush="{DynamicResource Theme.Settings.CardBorder}"
                                         BorderThickness="1.3"
                                         CornerRadius="8"
                                         Visibility="Collapsed">
-                                    <TextBlock x:Name="UpdateStatusPopupText"
-                                               Style="{StaticResource SettingsItemLabel}"
-                                               Text="No update found right now."/>
+                                    <StackPanel>
+                                        <TextBlock x:Name="UpdateStatusPopupText"
+                                                   Style="{StaticResource SettingsItemLabel}" TextWrapping="Wrap"
+                                                   Text="No update found right now."/>
+                                        <ProgressBar x:Name="ComponentProgress" Height="8" Margin="0,10,0,2" IsIndeterminate="False" Visibility="Collapsed"/>
+                                    </StackPanel>
                                 </Border>
                             </Grid>
                         </Border>

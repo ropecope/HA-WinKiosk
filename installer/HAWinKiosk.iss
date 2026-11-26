@@ -52,6 +52,24 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: no
 const
   RuntimeKey = 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
 
+var
+  PrerequisitePage: TOutputMarqueeProgressWizardPage;
+
+procedure InitializeWizard();
+begin
+  PrerequisitePage := CreateOutputMarqueeProgressPage('Required components', 'Microsoft Edge WebView2 Runtime');
+end;
+
+procedure ShowPrerequisiteStatus(const MessageText, Detail: String);
+begin
+  if not WizardSilent() then
+  begin
+    PrerequisitePage.SetText(MessageText, Detail);
+    PrerequisitePage.Animate();
+  end;
+  Log(MessageText + ' ' + Detail);
+end;
+
 function RuntimePresent(): Boolean;
 var
   V: String;
@@ -73,15 +91,30 @@ begin
       Result := 'WebView2 is required. Install it before continuing.';
       Exit;
     end;
+  if not WizardSilent() then PrerequisitePage.Show();
   try
-    ExtractTemporaryFile('MicrosoftEdgeWebview2Setup.exe');
-    if not Exec(ExpandConstant('{tmp}\MicrosoftEdgeWebview2Setup.exe'), '/silent /install', '', SW_SHOW, ewWaitUntilTerminated, ExitCode) then
-      Result := 'Unable to start the Microsoft WebView2 installer.'
-    else if not RuntimePresent() then
-      Result := 'WebView2 installation was not confirmed. Check Internet access or install the Microsoft Evergreen Standalone Runtime, then retry. Exit code: ' + IntToStr(ExitCode);
-  except
-    Result := 'WebView2 installation failed: ' + GetExceptionMessage;
+    try
+      ShowPrerequisiteStatus('Preparing WebView2 installer...', 'Checking required component');
+      ExtractTemporaryFile('MicrosoftEdgeWebview2Setup.exe');
+      ShowPrerequisiteStatus('Downloading and installing WebView2...', 'Microsoft installer is running. Internet access may be required.');
+      if not Exec(ExpandConstant('{tmp}\MicrosoftEdgeWebview2Setup.exe'), '/silent /install', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) then
+        Result := 'Unable to start the Microsoft WebView2 installer.'
+      else
+      begin
+        ShowPrerequisiteStatus('Checking WebView2 installation...', 'Verifying the installed runtime');
+        if not RuntimePresent() then
+          Result := 'WebView2 installation was not confirmed. Check Internet access or install the Microsoft Evergreen Standalone Runtime, then retry. Exit code: ' + IntToStr(ExitCode)
+        else
+          Log('WebView2 installed and verified.');
+      end;
+    except
+      Result := 'WebView2 installation failed: ' + GetExceptionMessage;
+    end;
+  finally
+    if not WizardSilent() then PrerequisitePage.Hide();
   end;
+  if (Result = '') and not WizardSilent() then
+    MsgBox('WebView2 installation verified. GrowBox Panel setup will now continue.', mbInformation, MB_OK);
 end;
 
 [UninstallDelete]

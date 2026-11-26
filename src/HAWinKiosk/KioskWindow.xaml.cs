@@ -52,6 +52,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     private bool _motionPowerOverride;
     private long _lastDisplayCommand;
     private bool _healthProbeRunning;
+    private bool _componentCheckRunning;
     private int _healthFailures;
     private readonly DispatcherTimer _networkRetryTimer = new() { Interval = TimeSpan.FromSeconds(15) };
 
@@ -1667,26 +1668,48 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (!CheckComponentsButton.IsEnabled || _isClosing) return;
         if (WebView2Prerequisites.IsInstalled())
         {
-            ShowUpdateStatusPopup("Required WebView2 Runtime is installed. .NET is included in the app.");
+            ShowComponentStatus("Required WebView2 Runtime is installed. .NET is included in the app.", false);
             return;
         }
         DisableKioskLockdown();
         if (System.Windows.MessageBox.Show(this, "Microsoft Edge WebView2 Runtime is missing. Install it now? Internet access may be required.", "GrowBox Panel - required components", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        _componentCheckRunning = true;
         CheckComponentsButton.IsEnabled = false;
         SaveButton.IsEnabled = false;
+        BackToKioskButton.IsEnabled = false;
+        CheckUpdatesButton.IsEnabled = false;
         try
         {
-            ShowUpdateStatusPopup("Installing Microsoft WebView2 Runtime...");
-            var ok = await WebView2Prerequisites.InstallAsync();
+            ShowComponentStatus("Preparing Microsoft WebView2 installation...", true);
+            var ok = await WebView2Prerequisites.InstallAsync(message => ShowComponentStatus(message, true));
             if (!_isClosing)
-                System.Windows.MessageBox.Show(this, ok ? "WebView2 is installed. Enter the HA address and click Save." : "Installation not confirmed. Check internet access, or use the official Evergreen Standalone installer. Then click Check components again.", "GrowBox Panel", MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                ShowComponentStatus(ok ? "WebView2 installation verified. Enter the HA address and click Save." : "Installation not confirmed. Check internet access, or install the official Evergreen Standalone Runtime. Then click Check components again.", false);
         }
         catch (Exception ex)
         {
             PanelLog.Write("WebView2 installation error", ex);
-            if (!_isClosing) ShowUpdateStatusPopup("WebView2 installation failed. Check internet access and retry.");
+            if (!_isClosing) ShowComponentStatus("WebView2 installation failed. Check internet access and retry.", false);
         }
-        finally { CheckComponentsButton.IsEnabled = true; SaveButton.IsEnabled = true; }
+        finally
+        {
+            _componentCheckRunning = false;
+            ComponentProgress.IsIndeterminate = false;
+            ComponentProgress.Visibility = Visibility.Collapsed;
+            CheckComponentsButton.IsEnabled = true;
+            SaveButton.IsEnabled = true;
+            BackToKioskButton.IsEnabled = true;
+            CheckUpdatesButton.IsEnabled = true;
+        }
+    }
+
+    private void ShowComponentStatus(string message, bool busy)
+    {
+        if (_isClosing) return;
+        _updatePopupTimer.Stop();
+        UpdateStatusPopupText.Text = message;
+        UpdateStatusPopup.Visibility = Visibility.Visible;
+        ComponentProgress.IsIndeterminate = busy;
+        ComponentProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ApplyProfileName_Click(object sender, RoutedEventArgs e)
@@ -2021,7 +2044,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void ShowUpdateStatusPopup(string message)
     {
-        if (UpdateStatusPopup == null || UpdateStatusPopupText == null) return;
+        if (_componentCheckRunning || UpdateStatusPopup == null || UpdateStatusPopupText == null) return;
         UpdateStatusPopupText.Text = message;
         UpdateStatusPopup.Visibility = Visibility.Visible;
         _updatePopupTimer.Stop();

@@ -37,6 +37,9 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 - MQTT standard telemetry 60 s, optional last-active telemetry 15 s; GPU WMI checks skipped on settings normalization when GPU sensor disabled. Commands ignored if config cannot be loaded.
 - Smoke tests expanded for profile and rendering round-trip. Runtime hardware acceptance remains outstanding.
 
+## Prerequisite installation UX
+- Missing WebView2: visible progress while preparing, downloading/installing and verifying. The signed Microsoft bootstrapper remains silent. No simulated percentages. Successful verification is required before continuing setup. App check displays status without the short update-popup timer. Actual clean Windows installation still requires hardware/VM validation.
+
 ## Local camera motion wake
 - Opt-in camera mode motion, mutually exclusive with MJPEG. Explicit camera selection, 1–60 minute hold (default 3), sensitivity 1–100 (default 50).
 - Local frame differences at 2 samples/s, requested 320×240 capture, downsampled to 160×120. No JPEG encoding, image storage, streaming or face recognition in this mode.

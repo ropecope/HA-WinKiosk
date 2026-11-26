@@ -30,19 +30,23 @@ internal static class WebView2Prerequisites
         catch { return false; }
     }
 
-    public static async Task<bool> InstallAsync()
+    public static async Task<bool> InstallAsync(Action<string>? report = null)
     {
+        report?.Invoke("Checking required WebView2 Runtime...");
         if (IsInstalled()) return true;
         var path = Path.Combine(AppContext.BaseDirectory, "MicrosoftEdgeWebview2Setup.exe");
         if (!File.Exists(path))
         {
+            report?.Invoke("Opening the official Microsoft download page...");
             OpenDownloadPage();
             return false;
         }
         // Bundled bootstrapper is validated against Microsoft's Authenticode signature at build time.
+        report?.Invoke("Downloading and installing WebView2. Internet access may be required...");
         using var process = Process.Start(new ProcessStartInfo(path, "/silent /install") { UseShellExecute = true });
         if (process == null) return false;
         await process.WaitForExitAsync();
+        report?.Invoke("Verifying the installed runtime...");
         PanelLog.Write("WebView2 bootstrapper finished");
         return IsInstalled();
     }
