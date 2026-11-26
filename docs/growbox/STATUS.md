@@ -14,3 +14,18 @@ Fetch upstream main; fast-forward our main only; create integration branch from 
 
 ## Verification
 Initial review covers central WPF, configuration, MQTT, update and installer paths. Not a complete runtime audit. No Windows hardware test has been performed. All changes must be evaluated on the actual tablet before production.
+
+## Implemented in the first hardening pass
+- Separate application settings folder, installer ID, autostart name and single-instance mutex from upstream; manual updates only.
+- First-run setup does not lock the Windows shell; recovery settings and touch exit remain available. Failed navigation hides stale browser content and shows a native offline panel with periodic retry.
+- Host:port normalization, valid HTTP(S) address required, same-origin remote navigation and browser gesture/microphone restrictions.
+- No retained MQTT command replay; remote settings respects PIN, one initial/reconnect loop, conservative defaults.
+- Atomic YAML replacement with previous file backup and recovery on invalid YAML.
+- Windows CI builds/publishes preview binary and installer; smoke tests cover URL rules and settings defaults.
+
+## Open / acceptance tests
+- Actual Fusion5 touch behavior, settings gear, native keyboard, WebView2 renderer/browser crash, HA outage and reconnect, MQTT broker restart and device power/sleep. No hardware test yet.
+- Upstream issue #3 remains an OS shell limitation; #5 shell replacement deferred (not appropriate for an untested touch-only device).
+- PIN storage still Base64; MQTT passwords in YAML and transport security need a deliberate design. Do not expose the broker outside the trusted LAN.
+- Full UI localization, configurable box profiles, resource measurements, optional GPU software-rendering mode, watchdog process and branded icon are planned, not complete.
+- No production release published. CI artifacts are previews; install only on a test device after green build.

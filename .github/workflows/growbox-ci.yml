@@ -22,6 +22,9 @@ jobs:
       - name: Restore and build
         shell: pwsh
         run: dotnet build HA-WinKiosk.sln -c Release
+      - name: Regression smoke tests
+        shell: pwsh
+        run: dotnet run --project tests/GrowBox.Smoke/GrowBox.Smoke.csproj -c Release
       - name: Publish x64
         shell: pwsh
         run: dotnet publish src/HAWinKiosk/HAWinKiosk.csproj -c Release -r win-x64 --self-contained true /p:BundleAsExe=true /p:PublishSingleFile=false -o publish
@@ -33,4 +36,24 @@ jobs:
         with:
           name: GrowBox-Panel-x64-preview
           path: publish/
+          retention-days: 7
+      - name: Build preview installer
+        shell: pwsh
+        run: |
+          $iscc = @("C:\Program Files (x86)\Inno Setup 6\ISCC.exe", "C:\Program Files\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            choco install innosetup -y
+            if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed" }
+            $iscc = @("C:\Program Files (x86)\Inno Setup 6\ISCC.exe", "C:\Program Files\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          if (-not $iscc) { throw "ISCC unavailable" }
+          $publishDir = (Resolve-Path publish).Path
+          & $iscc "/DPublishDir=$publishDir" installer/HAWinKiosk.iss
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+          if (-not (Test-Path installer/output/HAWinKiosk-Setup.exe)) { throw "Installer missing" }
+          Copy-Item installer/output/HAWinKiosk-Setup.exe GrowBox-Panel-Preview-Setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GrowBox-Panel-preview-installer
+          path: GrowBox-Panel-Preview-Setup.exe
           retention-days: 7
