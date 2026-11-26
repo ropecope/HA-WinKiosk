@@ -155,11 +155,13 @@ public static class SettingsManager
         var cam = s.Sensors.CameraStream;
         var mode = (cam.Mode ?? "off").Trim().ToLowerInvariant();
         // Legacy "ha" (MQTT camera entity) remaps to off; only off | mjpeg remain.
-        var normalizedMode = mode == "mjpeg" ? "mjpeg" : "off";
+        var normalizedMode = mode is "mjpeg" or "motion" ? mode : "off";
         var cameraMigrated = !string.Equals(cam.Mode, normalizedMode, StringComparison.OrdinalIgnoreCase)
             || mode is "ha";
         cam.Mode = normalizedMode;
         cam.Fps = Math.Clamp(cam.Fps, 1, 15);
+        cam.MotionHoldMinutes = Math.Clamp(cam.MotionHoldMinutes, 1, 60);
+        cam.MotionSensitivity = Math.Clamp(cam.MotionSensitivity, 1, 100);
         cam.Port = Math.Clamp(cam.Port <= 0 ? 8081 : cam.Port, 1, 65535);
         s.Kiosk.CameraDeviceId ??= "";
         return migratedPs || cameraMigrated;

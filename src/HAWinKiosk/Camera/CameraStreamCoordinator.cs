@@ -9,7 +9,7 @@ public sealed class CameraStreamCoordinator : IDisposable
 {
     private static readonly string LogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "HA-WinKiosk",
+        "GrowBox-Panel",
         "camera.log");
 
     private readonly CameraCaptureService _capture = new();
@@ -20,6 +20,10 @@ public sealed class CameraStreamCoordinator : IDisposable
     private int _port = 8081;
     private string? _deviceId;
     private bool _disposed;
+    private int _motionSensitivity = 50;
+    public bool MotionActive => _mode == "motion";
+    public long LastFrameTicks => _capture.LastFrameTicks;
+    public long LastMotionTicks => _capture.LastMotionTicks;
 
     public CameraStreamCoordinator()
     {
@@ -33,13 +37,32 @@ public sealed class CameraStreamCoordinator : IDisposable
     {
         _mqtt = mqtt;
         var mode = (settings.Sensors.CameraStream.Mode ?? "off").Trim().ToLowerInvariant();
-        if (mode != "mjpeg")
+        if (mode is not ("mjpeg" or "motion"))
             mode = "off";
         var fps = Math.Clamp(settings.Sensors.CameraStream.Fps, 1, 15);
         var port = Math.Clamp(settings.Sensors.CameraStream.Port <= 0 ? 8081 : settings.Sensors.CameraStream.Port, 1, 65535);
         var deviceId = string.IsNullOrWhiteSpace(settings.Kiosk.CameraDeviceId)
             ? null
             : settings.Kiosk.CameraDeviceId.Trim();
+
+        if (mode == "motion")
+        {
+            var sensitivity = Math.Clamp(settings.Sensors.CameraStream.MotionSensitivity, 1, 100);
+            if (mode == _mode && sensitivity == _motionSensitivity && string.Equals(deviceId, _deviceId, StringComparison.Ordinal)) return;
+            StopRuntime();
+            _mode = "off";
+            _deviceId = deviceId;
+            _motionSensitivity = sensitivity;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(deviceId)) throw new InvalidOperationException("Select a specific camera for motion wake.");
+                await _capture.StartAsync(deviceId, 2, localMotion: true, sensitivity: sensitivity);
+                _mode = "motion";
+            }
+            catch { StopRuntime(); throw; }
+            await ClearMqttCameraDiscoveryAsync();
+            return;
+        }
 
         if (mode == _mode && mode == "off")
         {

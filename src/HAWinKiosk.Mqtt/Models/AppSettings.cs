@@ -362,13 +362,19 @@ public class AudioOutputConfig
 /// <summary>Camera export: off, or LAN MJPEG for an NVR / Home Assistant MJPEG camera.</summary>
 public class CameraStreamConfig
 {
-    /// <summary>off | mjpeg</summary>
+    /// <summary>off | mjpeg | motion (local screen wake, no stream)</summary>
     [YamlMember(Alias = "mode")]
     public string Mode { get; set; } = "off";
 
     /// <summary>Capture rate 1-15 (MJPEG mode).</summary>
     [YamlMember(Alias = "fps")]
     public int Fps { get; set; } = 5;
+
+    [YamlMember(Alias = "motionHoldMinutes")]
+    public int MotionHoldMinutes { get; set; } = 3;
+
+    [YamlMember(Alias = "motionSensitivity")]
+    public int MotionSensitivity { get; set; } = 50;
 
     /// <summary>MJPEG HTTP listen port (default 8081).</summary>
     [YamlMember(Alias = "port")]

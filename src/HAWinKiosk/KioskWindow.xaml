@@ -671,11 +671,17 @@
 
                                     <StackPanel x:Name="CameraStreamPanel" Visibility="Collapsed">
                                         <settings:SettingsSelectRow x:Name="CameraStreamModeSelect"
-                                                                    Label="Camera stream"
+                                                                    Label="Camera mode"
                                                                     SelectionChanged="CameraStreamModeSelect_SelectionChanged">
                                             <ComboBoxItem Content="Off" Tag="off"/>
                                             <ComboBoxItem Content="MJPEG stream" Tag="mjpeg"/>
+                                            <ComboBoxItem Content="Motion wake (local only)" Tag="motion"/>
                                         </settings:SettingsSelectRow>
+                                        <StackPanel x:Name="MotionWakeOptionsPanel" Margin="16,0,0,8" Visibility="Collapsed">
+                                            <settings:SettingsSliderRow x:Name="MotionHoldSlider" Label="Screen on (minutes)" Minimum="1" Maximum="60" Value="3"/>
+                                            <settings:SettingsSliderRow x:Name="MotionSensitivitySlider" Label="Motion sensitivity" Minimum="1" Maximum="100" Value="50"/>
+                                            <settings:SettingsNote Text="Select the front camera above. Motion and touch extend the timer. Images are not saved or streamed. Test the selected camera before use."/>
+                                        </StackPanel>
                                         <StackPanel x:Name="CameraStreamOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
                                             <settings:SettingsSliderRow x:Name="CameraFpsSlider"
                                                                         Label="FPS"

@@ -46,6 +46,10 @@ public partial class KioskWindow : Window, IKioskHostActions
     private bool _mainNavigationSucceeded;
     private bool _openingSettings;
     private bool _navigationFailed;
+    private readonly DispatcherTimer _motionWakeTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private long _lastMotionActivity = Environment.TickCount64;
+    private bool _motionScreenOff;
+    private bool _motionPowerOverride;
     private bool _healthProbeRunning;
     private int _healthFailures;
     private readonly DispatcherTimer _networkRetryTimer = new() { Interval = TimeSpan.FromSeconds(15) };
@@ -62,6 +66,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         CustomButtonPopup.PlacementTarget = this;
         ContentRendered += (_, _) => UpdateSettingsButtonVisibility();
         _networkRetryTimer.Tick += async (_, _) => await CheckConnectionAsync();
+        _motionWakeTimer.Tick += (_, _) => UpdateMotionWake();
         _updatePopupTimer.Interval = TimeSpan.FromSeconds(2.5);
         _updatePopupTimer.Tick += (_, _) =>
         {
@@ -83,6 +88,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         else if (!_showSettingsFirst)
             ApplyLockdownMode();
         DisplayPowerMonitor.Register(new WindowInteropHelper(this).Handle);
+        _motionWakeTimer.Start();
 
         ApplySettingsUiTheme();
         PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
@@ -615,7 +621,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
 
         var mode = (_settings.Sensors.CameraStream.Mode ?? "off").Trim().ToLowerInvariant();
-        SelectComboByTag(CameraStreamModeSelect.ComboBox, mode == "mjpeg" ? "mjpeg" : "off");
+        SelectComboByTag(CameraStreamModeSelect.ComboBox, mode is "mjpeg" or "motion" ? mode : "off");
+        MotionHoldSlider.Value = Math.Clamp(_settings.Sensors.CameraStream.MotionHoldMinutes, 1, 60);
+        MotionSensitivitySlider.Value = Math.Clamp(_settings.Sensors.CameraStream.MotionSensitivity, 1, 100);
         CameraFpsSlider.Value = Math.Clamp(_settings.Sensors.CameraStream.Fps, 1, 15);
         CameraMjpegPortBox.Text = Math.Clamp(_settings.Sensors.CameraStream.Port <= 0 ? 8081 : _settings.Sensors.CameraStream.Port, 1, 65535).ToString();
         UpdateCameraStreamOptionsVisibility();
@@ -628,6 +636,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (!_hasCameraDevice)
         {
             CameraStreamOptionsPanel.Visibility = Visibility.Collapsed;
+            if (MotionWakeOptionsPanel != null) MotionWakeOptionsPanel.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -636,6 +645,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             mode = tag.Trim().ToLowerInvariant();
 
         CameraStreamOptionsPanel.Visibility = mode == "mjpeg" ? Visibility.Visible : Visibility.Collapsed;
+        if (MotionWakeOptionsPanel != null) MotionWakeOptionsPanel.Visibility = mode == "motion" ? Visibility.Visible : Visibility.Collapsed;
         if (CameraMjpegOptionsPanel != null)
             CameraMjpegOptionsPanel.Visibility = mode == "mjpeg" ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -1600,6 +1610,49 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void RetryConnection_Click(object sender, RoutedEventArgs e) => RetryFailedNavigation();
 
+    [DllImport("kernel32.dll")]
+    private static extern uint SetThreadExecutionState(uint flags);
+
+    private void ReleaseMotionPower()
+    {
+        if (_motionPowerOverride) SetThreadExecutionState(0x80000000u);
+        _motionPowerOverride = false;
+        if (_motionScreenOff) HAWinKiosk.Mqtt.Commands.MonitorWakeCommand.Execute();
+        _motionScreenOff = false;
+    }
+
+    private void UpdateMotionWake()
+    {
+        if (_isClosing) return;
+        var now = Environment.TickCount64;
+        var lastFrame = _cameraStream.LastFrameTicks;
+        if (!_cameraStream.MotionActive || lastFrame == 0 || now - lastFrame > 6000)
+        {
+            ReleaseMotionPower(); // fail safe: never leave our own screen blank when capture fails
+            _lastMotionActivity = now;
+            return;
+        }
+        var motion = _cameraStream.LastMotionTicks;
+        var recentMotion = motion != 0 && now - motion < 2000;
+        var recentInput = uint.TryParse(SensorReader.LastActiveSeconds(), out var idleSeconds) && idleSeconds < 2;
+        var settingsOpen = SettingsPanel.Visibility == Visibility.Visible || _openingSettings;
+        if (recentMotion || recentInput || settingsOpen) _lastMotionActivity = now;
+        var active = now - _lastMotionActivity < TimeSpan.FromMinutes(Math.Clamp(_settings.Sensors.CameraStream.MotionHoldMinutes, 1, 60)).TotalMilliseconds;
+        // This UI thread owns the Windows execution-state request; release on disable/exit.
+        SetThreadExecutionState(active ? 0x80000003u : 0x80000001u);
+        _motionPowerOverride = true;
+        if (active && (recentMotion || recentInput || settingsOpen) && MonitorPowerTracker.GetState() == "off")
+        {
+            HAWinKiosk.Mqtt.Commands.MonitorWakeCommand.Execute();
+            _motionScreenOff = false;
+        }
+        else if (!active && MonitorPowerTracker.GetState() == "on")
+        {
+            HAWinKiosk.Mqtt.Commands.MonitorSleepCommand.Execute();
+            _motionScreenOff = true;
+        }
+    }
+
     private void SettingsKeyboard_Click(object sender, RoutedEventArgs e) => ShowTouchKeyboard();
 
     private void ApplyProfileName_Click(object sender, RoutedEventArgs e)
@@ -1871,6 +1924,11 @@ public partial class KioskWindow : Window, IKioskHostActions
     private async Task SaveSettingsAndReturnAsync()
     {
         ApplyFormToSettings();
+        if (_settings.Sensors.CameraStream.Mode == "motion" && string.IsNullOrWhiteSpace(_settings.Kiosk.CameraDeviceId))
+        {
+            ShowUpdateStatusPopup("Select the front camera explicitly for motion wake.");
+            return;
+        }
         if (_settings.Kiosk.Url == "about:blank")
         {
             ShowUpdateStatusPopup("Enter a valid HTTP or HTTPS Home Assistant address.");
@@ -2089,7 +2147,9 @@ public partial class KioskWindow : Window, IKioskHostActions
             var camMode = "off";
             if (CameraStreamModeSelect.SelectedItem is ComboBoxItem modeItem && modeItem.Tag is string modeTag)
                 camMode = modeTag.Trim().ToLowerInvariant();
-            _settings.Sensors.CameraStream.Mode = camMode == "mjpeg" ? "mjpeg" : "off";
+            _settings.Sensors.CameraStream.Mode = camMode is "mjpeg" or "motion" ? camMode : "off";
+            _settings.Sensors.CameraStream.MotionHoldMinutes = Math.Clamp((int)Math.Round(MotionHoldSlider.Value), 1, 60);
+            _settings.Sensors.CameraStream.MotionSensitivity = Math.Clamp((int)Math.Round(MotionSensitivitySlider.Value), 1, 100);
             if (camMode == "mjpeg")
                 _settings.Sensors.CameraStream.Fps = Math.Clamp((int)Math.Round(CameraFpsSlider.Value), 1, 15);
             if (CameraMjpegPortBox.TryGetInt(out var camPort) && camPort is >= 1 and <= 65535)
@@ -2141,6 +2201,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         _isClosing = true;
         _networkRetryTimer.Stop();
+        _motionWakeTimer.Stop();
+        ReleaseMotionPower();
         DisableKioskLockdown();
         _dndManager?.SetEnabled(false);
         _cameraStream.Dispose();

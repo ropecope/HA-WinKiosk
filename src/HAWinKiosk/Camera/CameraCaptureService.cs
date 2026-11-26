@@ -13,7 +13,7 @@ public sealed class CameraCaptureService : IDisposable
 {
     private static readonly string LogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "HA-WinKiosk",
+        "GrowBox-Panel",
         "camera.log");
 
     private VideoCapture? _capture;
@@ -21,6 +21,12 @@ public sealed class CameraCaptureService : IDisposable
     private Task? _loopTask;
     private int _fps = 5;
     private int _framesEncoded;
+    private bool _localMotion;
+    private int _motionSensitivity;
+    private long _lastFrameTicks;
+    private long _lastMotionTicks;
+    public long LastFrameTicks => Interlocked.Read(ref _lastFrameTicks);
+    public long LastMotionTicks => Interlocked.Read(ref _lastMotionTicks);
     private bool _disposed;
 
     public event Action<byte[]>? FrameCaptured;
@@ -43,10 +49,12 @@ public sealed class CameraCaptureService : IDisposable
         return devices.Select(d => (d.Id, string.IsNullOrWhiteSpace(d.Name) ? d.Id : d.Name)).ToList();
     }
 
-    public async Task StartAsync(string? deviceId, int fps)
+    public async Task StartAsync(string? deviceId, int fps, bool localMotion = false, int sensitivity = 50)
     {
         Stop();
-        _fps = Math.Clamp(fps, 1, 15);
+        _localMotion = localMotion;
+        _motionSensitivity = Math.Clamp(sensitivity, 1, 100);
+        _fps = localMotion ? 2 : Math.Clamp(fps, 1, 15);
         _framesEncoded = 0;
 
         var listed = await ListDevicesAsync();
@@ -60,6 +68,8 @@ public sealed class CameraCaptureService : IDisposable
         var index = 0;
         if (!string.IsNullOrWhiteSpace(deviceId))
         {
+            if (localMotion && !listed.Any(d => d.Id == deviceId))
+                throw new InvalidOperationException("Selected camera unavailable.");
             for (var i = 0; i < listed.Count; i++)
             {
                 if (listed[i].Id == deviceId)
@@ -81,7 +91,13 @@ public sealed class CameraCaptureService : IDisposable
             throw new InvalidOperationException("OpenCvSharp could not open the camera.");
 
         // MSMF/DSHOW often default to 640x480 if unset - ask for the highest mode the driver accepts.
-        PreferHighestResolution(_capture);
+        if (localMotion)
+        {
+            _capture.FrameWidth = 320;
+            _capture.FrameHeight = 240;
+            _capture.Fps = 2;
+        }
+        else PreferHighestResolution(_capture);
         Log($"OpenCV opened backend={_capture.GetBackendName()} size={_capture.FrameWidth}x{_capture.FrameHeight}");
 
         _loopCts = new CancellationTokenSource();
@@ -190,6 +206,8 @@ public sealed class CameraCaptureService : IDisposable
         try { _capture?.Release(); } catch { /* ignore */ }
         try { _capture?.Dispose(); } catch { /* ignore */ }
         _capture = null;
+        Interlocked.Exchange(ref _lastFrameTicks, 0);
+        Interlocked.Exchange(ref _lastMotionTicks, 0);
         Log($"Stop (framesEncoded={_framesEncoded})");
     }
 
@@ -204,6 +222,12 @@ public sealed class CameraCaptureService : IDisposable
     {
         var intervalMs = (int)Math.Round(1000.0 / _fps);
         using var frame = new Mat();
+        using var small = new Mat();
+        using var gray = new Mat();
+        using var previous = new Mat();
+        using var delta = new Mat();
+        using var mask = new Mat();
+        var warmup = 0;
 
         while (!token.IsCancellationRequested)
         {
@@ -220,6 +244,28 @@ public sealed class CameraCaptureService : IDisposable
                     continue;
                 }
 
+                if (_localMotion)
+                {
+                    Cv2.Resize(frame, small, new Size(160, 120));
+                    if (small.Channels() == 1) small.CopyTo(gray);
+                    else Cv2.CvtColor(small, gray, ColorConversionCodes.BGR2GRAY);
+                    Cv2.GaussianBlur(gray, gray, new Size(5, 5), 0);
+                    if (!previous.Empty() && warmup >= 4)
+                    {
+                        Cv2.Absdiff(previous, gray, delta);
+                        Cv2.Threshold(delta, mask, 20, 255, ThresholdTypes.Binary);
+                        var ratio = Cv2.CountNonZero(mask) / (double)(gray.Rows * gray.Cols);
+                        var minimum = 0.15 - 0.14 * (_motionSensitivity / 100.0);
+                        // Reject near-global exposure jumps; detect spatially localized movement.
+                        if (ratio >= minimum && ratio < 0.85)
+                            Interlocked.Exchange(ref _lastMotionTicks, Environment.TickCount64);
+                    }
+                    gray.CopyTo(previous);
+                    if (warmup < 4) warmup++;
+                    Interlocked.Exchange(ref _lastFrameTicks, Environment.TickCount64);
+                }
+                else
+                {
                 if (!Cv2.ImEncode(".jpg", frame, out var jpeg, new[] { (int)ImwriteFlags.JpegQuality, 55 }))
                 {
                     Thread.Sleep(40);
@@ -230,6 +276,7 @@ public sealed class CameraCaptureService : IDisposable
                 if (n == 1 || n % 30 == 0)
                     Log($"Encoded frame #{n} {frame.Width}x{frame.Height} bytes={jpeg.Length}");
                 FrameCaptured?.Invoke(jpeg);
+                }
             }
             catch (Exception ex)
             {
