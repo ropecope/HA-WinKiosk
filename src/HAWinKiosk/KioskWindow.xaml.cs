@@ -45,6 +45,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private string? _gestureDocumentScriptId;
     private bool _mainNavigationSucceeded;
     private bool _openingSettings;
+    private bool _navigationFailed;
+    private readonly DispatcherTimer _networkRetryTimer = new() { Interval = TimeSpan.FromSeconds(15) };
 
     public KioskWindow(bool showSettingsFirst = false, bool previewWebViewError = false)
     {
@@ -57,6 +59,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         SettingsButtonPopup.PlacementTarget = this;
         CustomButtonPopup.PlacementTarget = this;
         ContentRendered += (_, _) => UpdateSettingsButtonVisibility();
+        _networkRetryTimer.Tick += (_, _) => RetryFailedNavigation();
         _updatePopupTimer.Interval = TimeSpan.FromSeconds(2.5);
         _updatePopupTimer.Tick += (_, _) =>
         {
@@ -958,6 +961,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void ShowSettings()
     {
         WebView.Visibility = Visibility.Collapsed;
+        OfflinePanel.Visibility = Visibility.Collapsed;
         SettingsButtonPopup.IsOpen = false;
         CustomButtonPopup.IsOpen = false;
         if (BreakingChangesBannerPopup != null)
@@ -991,7 +995,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void ShowKiosk()
     {
         SettingsPanel.Visibility = Visibility.Collapsed;
-        WebView.Visibility = Visibility.Visible;
+        WebView.Visibility = _navigationFailed ? Visibility.Collapsed : Visibility.Visible;
+        OfflinePanel.Visibility = _navigationFailed ? Visibility.Visible : Visibility.Collapsed;
         UpdateSettingsButtonVisibility();
         UpdateBreakingChangesBanner();
     }
@@ -1330,6 +1335,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             _webHooksAttached = true;
             wv.WebMessageReceived += OnWebMessageReceived;
             wv.NavigationCompleted += OnNavigationCompleted;
+            wv.ProcessFailed += (_, _) => SetNavigationFailed();
             wv.FrameCreated += OnCoreWebViewFrameCreated;
         }
 
@@ -1519,7 +1525,18 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         if (WebView.CoreWebView2 == null) return;
 
-        _mainNavigationSucceeded = e.IsSuccess;
+        if (!e.IsSuccess)
+        {
+            // A superseded navigation is not a connection error.
+            if (e.WebErrorStatus != CoreWebView2WebErrorStatus.OperationCanceled)
+                SetNavigationFailed();
+            return;
+        }
+        _mainNavigationSucceeded = true;
+        _navigationFailed = false;
+        _networkRetryTimer.Stop();
+        OfflinePanel.Visibility = Visibility.Collapsed;
+        if (SettingsPanel.Visibility != Visibility.Visible) WebView.Visibility = Visibility.Visible;
         ApplyPageZoom();
         ConfigureGestureFallbackOverlay();
 
@@ -1534,6 +1551,25 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         UpdateSettingsButtonVisibility();
     }
+
+    private void SetNavigationFailed()
+    {
+        if (_isClosing) return;
+        _mainNavigationSucceeded = false;
+        _navigationFailed = true;
+        WebView.Visibility = Visibility.Collapsed;
+        if (SettingsPanel.Visibility != Visibility.Visible) OfflinePanel.Visibility = Visibility.Visible;
+        UpdateSettingsButtonVisibility();
+        _networkRetryTimer.Start();
+    }
+
+    private void RetryFailedNavigation()
+    {
+        if (_isClosing || !_navigationFailed || SettingsPanel.Visibility == Visibility.Visible) return;
+        if (WebView.CoreWebView2 != null) NavigateTo(_settings.Kiosk.Url);
+    }
+
+    private void RetryConnection_Click(object sender, RoutedEventArgs e) => RetryFailedNavigation();
 
     private async Task TryInjectGestureScriptIntoMainAsync()
     {
@@ -1701,18 +1737,18 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         if (WebView.CoreWebView2 == null) return;
         var safeUrl = NormalizeNavigableUrl(url);
+        if (safeUrl == "about:blank") { SetNavigationFailed(); return; }
         try
         {
             WebView.CoreWebView2.Navigate(safeUrl);
         }
         catch (ArgumentException)
         {
-            // WebView2 rejects some URIs (e.g. raw MJPEG as a top-level document).
-            try { WebView.CoreWebView2.Navigate("about:blank"); } catch { /* ignore */ }
+            SetNavigationFailed();
         }
         catch (Exception)
         {
-            // Never let a bad navigation kill the kiosk process.
+            SetNavigationFailed();
         }
     }
 
@@ -2025,13 +2061,8 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void ExitToWindows_Click(object sender, RoutedEventArgs e)
     {
-        ApplyFormToSettings();
-        SettingsManager.Save(_settings);
-        PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
-        AutoStartManager.SetEnabled(_settings.AutoStart.Enabled);
-        _cameraStream.Dispose();
-        _mqtt?.Dispose();
-        _mqtt = null;
+        // Exit must work even if the settings file cannot be written.
+        DisableKioskLockdown();
         System.Windows.Application.Current.Shutdown();
     }
 
@@ -2066,6 +2097,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     protected override void OnClosed(EventArgs e)
     {
         _isClosing = true;
+        _networkRetryTimer.Stop();
         DisableKioskLockdown();
         _dndManager?.SetEnabled(false);
         _cameraStream.Dispose();

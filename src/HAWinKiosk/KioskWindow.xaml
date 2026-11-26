@@ -139,6 +139,15 @@
         <Grid x:Name="KioskPanel" Background="{DynamicResource Theme.Kiosk.Bg}">
             <Grid>
                 <wv2:WebView2 x:Name="WebView"/>
+                <Border x:Name="OfflinePanel" Visibility="Collapsed" Background="#182126" Padding="24" Panel.ZIndex="600">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="500">
+                        <TextBlock Text="GrowBox Panel" Foreground="#DCE8EC" FontSize="28" TextAlignment="Center" Margin="0,0,0,16"/>
+                        <TextBlock Text="Home Assistant is unavailable" Foreground="#FFFFFF" FontSize="21" TextWrapping="Wrap" TextAlignment="Center"/>
+                        <TextBlock Text="No live data. Retrying automatically every 15 seconds." Foreground="#B6C7CD" FontSize="16" TextWrapping="Wrap" TextAlignment="Center" Margin="0,12,0,20"/>
+                        <Button Content="Retry connection" Click="RetryConnection_Click" Padding="14,10" MinHeight="44"/>
+                        <Button Content="Panel settings" Click="SettingsButton_Click" Padding="14,10" MinHeight="44" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
                 <local:KioskGestureFallbackOverlay x:Name="GestureFallbackOverlay"
                                                    Panel.ZIndex="500"/>
             </Grid>

@@ -23,29 +23,32 @@ public static class SettingsManager
     public static string SettingsFilePath => SettingsPath;
 
     public static bool SettingsExists => File.Exists(SettingsPath);
+    public static bool LastLoadFailed { get; private set; }
 
     public static AppSettings Load()
     {
+        LastLoadFailed = false;
         if (!File.Exists(SettingsPath))
-            return new AppSettings();
-
-        var yaml = File.ReadAllText(SettingsPath).TrimStart('\uFEFF');
-        if (string.IsNullOrWhiteSpace(yaml))
             return new AppSettings();
 
         AppSettings s;
         try
         {
+            var yaml = File.ReadAllText(SettingsPath).TrimStart('\uFEFF');
+            if (string.IsNullOrWhiteSpace(yaml)) throw new InvalidDataException("Empty settings");
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .IgnoreUnmatchedProperties()
                 .Build();
             var file = deserializer.Deserialize<SettingsFileV2>(yaml);
-            s = file != null ? SettingsYamlConversion.ToAppSettings(file) : new AppSettings();
+            s = file != null ? SettingsYamlConversion.ToAppSettings(file) : throw new InvalidDataException("Invalid settings");
         }
         catch
         {
+            LastLoadFailed = true;
             s = new AppSettings();
+            PinSecretsStore.ApplyTo(s.Kiosk);
+            return s;
         }
 
         var migratedPs = NormalizeAppSettings(s);
@@ -58,7 +61,8 @@ public static class SettingsManager
     /// <returns>True when PowerShell command shape was migrated and should be persisted.</returns>
     private static bool NormalizeAppSettings(AppSettings s)
     {
-        s.Sensors.Enabled = s.Sensors.Enabled
+        s.Sensors.Enabled = (s.Sensors.Enabled ?? [])
+            .Where(x => !string.IsNullOrWhiteSpace(x))
             .Select(x => x.Trim())
             .Where(x => x.Length > 0)
             .Where(x => AllowedSensorIds.Contains(x))
@@ -80,7 +84,8 @@ public static class SettingsManager
                 .ToList();
         }
 
-        s.Commands.Enabled = s.Commands.Enabled
+        s.Commands.Enabled = (s.Commands.Enabled ?? [])
+            .Where(x => !string.IsNullOrWhiteSpace(x))
             .Select(x => x.Trim())
             .Where(x => x.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -252,7 +257,10 @@ public static class SettingsManager
         try
         {
             File.WriteAllText(temp, yaml);
-            File.Move(temp, SettingsPath, overwrite: true);
+            if (File.Exists(SettingsPath))
+                File.Replace(temp, SettingsPath, SettingsPath + ".bak");
+            else
+                File.Move(temp, SettingsPath);
         }
         finally
         {
