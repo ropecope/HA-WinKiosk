@@ -20,6 +20,10 @@ Check(!defaults.Sensors.Enabled.Contains("last_active"), "no high-frequency defa
 Check(!defaults.Commands.Enabled.Contains("shutdown"), "no default remote shutdown");
 defaults.Kiosk.PanelProfile = "mycobox";
 defaults.Kiosk.SoftwareRendering = true;
+defaults.Sensors.CameraStream.Mode = "motion";
+defaults.Sensors.CameraStream.MotionHoldMinutes = 5;
+defaults.Sensors.CameraStream.MotionSensitivity = 65;
 var roundTrip = SettingsYamlConversion.ToAppSettings(SettingsYamlConversion.FromAppSettings(defaults));
+Check(roundTrip.Sensors.CameraStream.Mode == "motion" && roundTrip.Sensors.CameraStream.MotionHoldMinutes == 5 && roundTrip.Sensors.CameraStream.MotionSensitivity == 65, "motion wake settings conversion");
 Check(roundTrip.Kiosk.PanelProfile == "mycobox" && roundTrip.Kiosk.SoftwareRendering, "profile and rendering settings conversion");
 Check(roundTrip.Mqtt.Host == defaults.Mqtt.Host && roundTrip.Mqtt.DeviceName == defaults.Mqtt.DeviceName, "settings conversion");

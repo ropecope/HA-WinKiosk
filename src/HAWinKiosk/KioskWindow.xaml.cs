@@ -50,6 +50,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     private long _lastMotionActivity = Environment.TickCount64;
     private bool _motionScreenOff;
     private bool _motionPowerOverride;
+    private long _lastDisplayCommand;
     private bool _healthProbeRunning;
     private int _healthFailures;
     private readonly DispatcherTimer _networkRetryTimer = new() { Interval = TimeSpan.FromSeconds(15) };
@@ -748,7 +749,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             {
                 var path = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "HA-WinKiosk",
+                    "GrowBox-Panel",
                     "camera.log");
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
                 System.IO.File.AppendAllText(path, $"{DateTime.Now:O} ApplyCameraStreamAsync: {ex}{Environment.NewLine}");
@@ -1641,14 +1642,17 @@ public partial class KioskWindow : Window, IKioskHostActions
         // This UI thread owns the Windows execution-state request; release on disable/exit.
         SetThreadExecutionState(active ? 0x80000003u : 0x80000001u);
         _motionPowerOverride = true;
-        if (active && (recentMotion || recentInput || settingsOpen) && MonitorPowerTracker.GetState() == "off")
+        if (active && (recentMotion || recentInput || settingsOpen) && MonitorPowerTracker.GetState() == "off"
+            && now - _lastDisplayCommand >= 1000)
         {
             HAWinKiosk.Mqtt.Commands.MonitorWakeCommand.Execute();
+            _lastDisplayCommand = now;
             _motionScreenOff = false;
         }
-        else if (!active && MonitorPowerTracker.GetState() == "on")
+        else if (!active && MonitorPowerTracker.GetState() == "on" && now - _lastDisplayCommand >= 10000)
         {
             HAWinKiosk.Mqtt.Commands.MonitorSleepCommand.Execute();
+            _lastDisplayCommand = now;
             _motionScreenOff = true;
         }
     }

@@ -16,6 +16,7 @@ Select a box profile, enter the actual HA dashboard URL, optionally apply the pr
 - Verify monitor state/sleep/wake and charger/unplug on the specific tablet. Do not enable sleep or shutdown until separately tested.
 - Measure app and WebView2 combined memory/CPU after 10 minutes and after extended running (2 GB Fusion5). Test graphics acceleration both ways.
 - Check portrait/landscape and display scaling; ensure header controls and settings exit reachable.
+- Test motion wake on the selected front camera: choose named camera, select motion mode, set 1 minute for testing, walk toward the panel, verify display wakes, touch extends timeout, then verify display off while Windows and Wi-Fi remain active. Cover the camera to test response; verify rear camera selection is not mistaken for front (OpenCV index ordering may differ). Unplug/disable camera while screen is off and verify fail-safe wake. Verify no MJPEG stream is listening in motion mode, and disabling motion releases the power override. Test on AC power; camera use may increase battery drain.
 - Check original HA-WinKiosk settings and installer remain untouched. Avoid running both kiosk apps at once.
 - Confirm OS Start menu behavior; this app is not an OS security boundary.
 

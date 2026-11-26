@@ -36,3 +36,9 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 - HA HTTP reachability checks every 15 s for non-custom profiles; two consecutive failures show offline. This does not prove live WebSocket or sensor freshness. Self-signed HTTPS override skips the native HTTP probe, retaining browser navigation/network checks.
 - MQTT standard telemetry 60 s, optional last-active telemetry 15 s; GPU WMI checks skipped on settings normalization when GPU sensor disabled. Commands ignored if config cannot be loaded.
 - Smoke tests expanded for profile and rendering round-trip. Runtime hardware acceptance remains outstanding.
+
+## Local camera motion wake
+- Opt-in camera mode motion, mutually exclusive with MJPEG. Explicit camera selection, 1–60 minute hold (default 3), sensitivity 1–100 (default 50).
+- Local frame differences at 2 samples/s, requested 320×240 capture, downsampled to 160×120. No JPEG encoding, image storage, streaming or face recognition in this mode.
+- Motion, input and open settings extend the display timeout. Windows execution state keeps the system awake while monitoring, and is released on disable/exit. If frames stop, the panel releases the override and attempts to wake any display it switched off.
+- Motion is not proof of human presence; stationary people may time out, fans/light changes may cause false triggers. Camera ID-to-OpenCV-index mapping and wake/sleep behavior must be verified on the two-camera Fusion5. No production acceptance yet.

@@ -246,10 +246,10 @@ public sealed class CameraCaptureService : IDisposable
 
                 if (_localMotion)
                 {
-                    Cv2.Resize(frame, small, new Size(160, 120));
+                    Cv2.Resize(frame, small, new OpenCvSharp.Size(160, 120));
                     if (small.Channels() == 1) small.CopyTo(gray);
                     else Cv2.CvtColor(small, gray, ColorConversionCodes.BGR2GRAY);
-                    Cv2.GaussianBlur(gray, gray, new Size(5, 5), 0);
+                    Cv2.GaussianBlur(gray, gray, new OpenCvSharp.Size(5, 5), 0);
                     if (!previous.Empty() && warmup >= 4)
                     {
                         Cv2.Absdiff(previous, gray, delta);
@@ -266,16 +266,15 @@ public sealed class CameraCaptureService : IDisposable
                 }
                 else
                 {
-                if (!Cv2.ImEncode(".jpg", frame, out var jpeg, new[] { (int)ImwriteFlags.JpegQuality, 55 }))
-                {
-                    Thread.Sleep(40);
-                    continue;
-                }
-
-                var n = Interlocked.Increment(ref _framesEncoded);
-                if (n == 1 || n % 30 == 0)
-                    Log($"Encoded frame #{n} {frame.Width}x{frame.Height} bytes={jpeg.Length}");
-                FrameCaptured?.Invoke(jpeg);
+                    if (!Cv2.ImEncode(".jpg", frame, out var jpeg, new[] { (int)ImwriteFlags.JpegQuality, 55 }))
+                    {
+                        Thread.Sleep(40);
+                        continue;
+                    }
+                    var n = Interlocked.Increment(ref _framesEncoded);
+                    if (n == 1 || n % 30 == 0)
+                        Log($"Encoded frame #{n} {frame.Width}x{frame.Height} bytes={jpeg.Length}");
+                    FrameCaptured?.Invoke(jpeg);
                 }
             }
             catch (Exception ex)
