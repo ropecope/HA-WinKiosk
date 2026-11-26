@@ -35,37 +35,21 @@ internal static class WebView2Prerequisites
         report?.Invoke("Checking required WebView2 Runtime...");
         if (IsInstalled()) return true;
         var path = Path.Combine(AppContext.BaseDirectory, "MicrosoftEdgeWebview2Setup.exe");
-        string? temp = null;
-        try
+        if (!File.Exists(path))
         {
-            if (!File.Exists(path))
-            {
-                using var bundled = typeof(WebView2Prerequisites).Assembly.GetManifestResourceStream("GrowBox.WebView2Bootstrapper.exe");
-                if (bundled == null)
-                {
-                    report?.Invoke("Opening the official Microsoft download page...");
-                    OpenDownloadPage();
-                    return false;
-                }
-                temp = Path.Combine(Path.GetTempPath(), "GrowBox-WebView2-" + Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(temp);
-                path = Path.Combine(temp, "MicrosoftEdgeWebview2Setup.exe");
-                using (var output = File.Create(path)) await bundled.CopyToAsync(output);
-            }
-            // The included bootstrapper is verified against Microsoft's Authenticode signature at build time.
-            report?.Invoke("Downloading and installing WebView2. Internet access may be required...");
-            using var process = Process.Start(new ProcessStartInfo(path, "/silent /install") { UseShellExecute = true });
-            if (process == null) return false;
-            await process.WaitForExitAsync();
-            report?.Invoke("Verifying the installed runtime...");
-            PanelLog.Write("WebView2 bootstrapper finished");
-            return IsInstalled();
+            // Portable distributions assume the system runtime is installed.
+            report?.Invoke("WebView2 is missing. Opening the official Microsoft download page...");
+            OpenDownloadPage();
+            return false;
         }
-        finally
-        {
-            if (temp != null)
-                try { Directory.Delete(temp, recursive: true); } catch { }
-        }
+        // The setup package includes the Microsoft bootstrapper verified at build time.
+        report?.Invoke("Downloading and installing WebView2. Internet access may be required...");
+        using var process = Process.Start(new ProcessStartInfo(path, "/silent /install") { UseShellExecute = true });
+        if (process == null) return false;
+        await process.WaitForExitAsync();
+        report?.Invoke("Verifying the installed runtime...");
+        PanelLog.Write("WebView2 bootstrapper finished");
+        return IsInstalled();
     }
 
     public static void OpenDownloadPage() =>

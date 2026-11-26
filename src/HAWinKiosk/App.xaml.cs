@@ -18,8 +18,11 @@ public partial class App : System.Windows.Application
             try
             {
                 using var mat = new OpenCvSharp.Mat(8, 8, OpenCvSharp.MatType.CV_8UC1);
-                using var bootstrapper = typeof(App).Assembly.GetManifestResourceStream("GrowBox.WebView2Bootstrapper.exe");
-                Shutdown(!mat.Empty() && bootstrapper is { Length: > 0 } ? 0 : 2);
+                // Exercise the WebView2 native loader as well as OpenCV. A missing
+                // installed runtime is acceptable on CI; missing loader DLL is not.
+                try { _ = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString(); }
+                catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException) { }
+                Shutdown(!mat.Empty() && typeof(App).Assembly.GetManifestResourceInfo("GrowBox.WebView2Bootstrapper.exe") == null ? 0 : 2);
             }
             catch { Shutdown(3); }
             return;

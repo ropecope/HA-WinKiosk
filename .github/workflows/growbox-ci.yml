@@ -28,9 +28,6 @@ jobs:
       - name: Publish x64
         shell: pwsh
         run: dotnet publish src/HAWinKiosk/HAWinKiosk.csproj -c Release -r win-x64 --self-contained true /p:BundleAsExe=true /p:PublishSingleFile=false -o publish
-      - name: Include verified WebView2 bootstrapper
-        shell: pwsh
-        run: ./tools/Add-WebView2Bootstrapper.ps1 -PublishDir publish
       - name: Verify output
         shell: pwsh
         run: |
@@ -43,8 +40,7 @@ jobs:
       - name: Publish portable single EXE
         shell: pwsh
         run: |
-          $bootstrapper = (Resolve-Path publish/MicrosoftEdgeWebview2Setup.exe).Path
-          dotnet publish src/HAWinKiosk/HAWinKiosk.csproj -c Release -r win-x64 --self-contained true /p:BundleAsExe=true /p:PublishSingleFile=true /p:IncludeAllContentForSelfExtract=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=false /p:DebugType=none "/p:PortableBootstrapper=$bootstrapper" -o portable
+          dotnet publish src/HAWinKiosk/HAWinKiosk.csproj -c Release -r win-x64 --self-contained true /p:BundleAsExe=true /p:PublishSingleFile=true /p:IncludeAllContentForSelfExtract=false /p:IncludeNativeLibrariesForSelfExtract=true /p:EnableCompressionInSingleFile=false /p:PublishTrimmed=false /p:DebugType=none -o portable
           if ($LASTEXITCODE -ne 0) { throw "Portable publish failed" }
           if (-not (Test-Path portable/HAWinKiosk.exe)) { throw "Portable EXE missing" }
           New-Item -ItemType Directory -Force portable-check | Out-Null
@@ -59,6 +55,9 @@ jobs:
           name: GrowBox-Panel-portable-exe
           path: portable-check/GrowBox-Panel.exe
           retention-days: 7
+      - name: Include verified WebView2 bootstrapper for installer only
+        shell: pwsh
+        run: ./tools/Add-WebView2Bootstrapper.ps1 -PublishDir publish
       - name: Build preview installer
         shell: pwsh
         run: |
