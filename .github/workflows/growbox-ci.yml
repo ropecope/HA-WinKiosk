@@ -1,0 +1,36 @@
+name: GrowBox Panel Windows CI
+
+on:
+  push:
+    branches: [growbox, "growbox-integration/**"]
+  pull_request:
+    branches: [growbox]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore and build
+        shell: pwsh
+        run: dotnet build HA-WinKiosk.sln -c Release
+      - name: Publish x64
+        shell: pwsh
+        run: dotnet publish src/HAWinKiosk/HAWinKiosk.csproj -c Release -r win-x64 --self-contained true /p:BundleAsExe=true /p:PublishSingleFile=false -o publish
+      - name: Verify output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path publish/HAWinKiosk.exe)) { throw "Missing published executable" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GrowBox-Panel-x64-preview
+          path: publish/
+          retention-days: 7
