@@ -108,7 +108,7 @@ public sealed class ConfigSectionV2
 public sealed class MqttSectionV2
 {
     [YamlMember(Alias = "host")]
-    public string Host { get; set; } = "192.168.1.?";
+    public string Host { get; set; } = "";
 
     [YamlMember(Alias = "port")]
     public int Port { get; set; } = 1883;
@@ -120,7 +120,7 @@ public sealed class MqttSectionV2
     public string? Password { get; set; }
 
     [YamlMember(Alias = "deviceName")]
-    public string DeviceName { get; set; } = "living-room-kiosk";
+    public string DeviceName { get; set; } = $"growbox-panel-{Environment.MachineName}";
 
     [YamlMember(Alias = "discoveryPrefix")]
     public string DiscoveryPrefix { get; set; } = "homeassistant";

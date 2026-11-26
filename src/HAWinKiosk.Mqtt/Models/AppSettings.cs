@@ -253,7 +253,7 @@ public class GesturesConfig
 public class MqttConfig
 {
     [YamlMember(Alias = "host")]
-    public string Host { get; set; } = "192.168.1.?";
+    public string Host { get; set; } = "";
 
     [YamlMember(Alias = "port")]
     public int Port { get; set; } = 1883;
@@ -265,7 +265,7 @@ public class MqttConfig
     public string? Password { get; set; }
 
     [YamlMember(Alias = "deviceName")]
-    public string DeviceName { get; set; } = "living-room-kiosk";
+    public string DeviceName { get; set; } = $"growbox-panel-{Environment.MachineName}";
 
     [YamlMember(Alias = "discoveryPrefix")]
     public string DiscoveryPrefix { get; set; } = "homeassistant";
@@ -282,7 +282,7 @@ public class SensorsConfig
     [YamlMember(Alias = "enabled")]
     public List<string> Enabled { get; set; } =
     [
-        "battery", "cpu", "memory", "gpu", "monitor_on", "current_url", "last_active", "updates_pending"
+        "battery", "cpu", "memory", "monitor_on", "current_url"
     ];
 
     [YamlMember(Alias = "cameraStream")]
@@ -294,8 +294,7 @@ public class CommandsConfig
     [YamlMember(Alias = "enabled")]
     public List<string> Enabled { get; set; } =
     [
-        "shutdown", "restart", "sleep", "monitorsleep", "monitorwake",
-        "refresh", "clearcache", "opensettings", "closesettings", "windowsupdate"
+        "monitorsleep", "monitorwake", "refresh"
     ];
 
     /// <summary>Published single-command field; migrated into <see cref="PowerShellCommands"/> on load.</summary>

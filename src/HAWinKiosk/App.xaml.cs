@@ -34,8 +34,7 @@ public partial class App : System.Windows.Application
 
         var kiosk = new KioskWindow(showSettingsFirst, previewWebViewError);
         kiosk.Show();
-        if (!previewWebViewError)
-            AutoUpdateService.Start();
+        // GrowBox releases are installed explicitly; never run the upstream updater.
     }
 
     protected override void OnExit(ExitEventArgs e)

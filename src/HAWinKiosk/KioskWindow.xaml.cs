@@ -74,7 +74,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings = SettingsManager.Load();
         if (_previewWebViewError)
             ApplyKioskBounds(forceTopmost: true);
-        else
+        else if (!_showSettingsFirst)
             ApplyLockdownMode();
         DisplayPowerMonitor.Register(new WindowInteropHelper(this).Handle);
 
@@ -1067,9 +1067,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void UpdateExitButtonVisibility()
     {
         if (ExitToWindowsButton == null) return;
-        // Based on saved settings (and shell mode), not the live lockdown toggle.
-        var hide = !_settings.Kiosk.LockdownEnabled || IsLikelyShellMode();
-        ExitToWindowsButton.Visibility = hide ? Visibility.Collapsed : Visibility.Visible;
+        // Touch-only devices must always have a local exit from settings.
+        ExitToWindowsButton.Visibility = IsLikelyShellMode() ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void UpdateSettingsButtonVisibility()
@@ -1082,7 +1081,8 @@ public partial class KioskWindow : Window, IKioskHostActions
             return;
         }
 
-        var showGear = _settings.Kiosk.ShowSettingsButton;
+        // Keep recovery accessible even if the web page never loads.
+        var showGear = _settings.Kiosk.ShowSettingsButton || !_mainNavigationSucceeded;
         var showCustom = _settings.Kiosk.CustomButton?.Enabled == true;
 
         SettingsButtonPopup.IsOpen = showGear;
@@ -1413,6 +1413,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void ShowWebViewInitFailure(bool runtimeMissing, string? detail)
     {
+        DisableKioskLockdown();
         PopulateSettingsForm();
         ShowSettings();
 
@@ -1720,11 +1721,14 @@ public partial class KioskWindow : Window, IKioskHostActions
             return "about:blank";
 
         var s = raw.Trim();
-        if (Uri.TryCreate(s, UriKind.Absolute, out var abs) && !string.IsNullOrWhiteSpace(abs.Scheme))
+        if (Uri.TryCreate(s, UriKind.Absolute, out var abs)
+            && (abs.Scheme == Uri.UriSchemeHttp || abs.Scheme == Uri.UriSchemeHttps)
+            && !string.IsNullOrWhiteSpace(abs.Host))
             return abs.ToString();
 
-        // If user entered host/path without scheme, prefer HTTP.
-        if (Uri.TryCreate($"http://{s}", UriKind.Absolute, out var withHttp))
+        // A host:port without a scheme may otherwise parse as a custom URI scheme.
+        if (!s.Contains("://") && Uri.TryCreate($"http://{s}", UriKind.Absolute, out var withHttp)
+            && !string.IsNullOrWhiteSpace(withHttp.Host))
             return withHttp.ToString();
 
         return "about:blank";
@@ -1783,12 +1787,10 @@ public partial class KioskWindow : Window, IKioskHostActions
         ShowSettings();
     }
 
-    /// <summary>MQTT opensettings command - no PIN gate (trusted broker).</summary>
+    /// <summary>Remote requests never bypass the local PIN gate.</summary>
     private void OpenSettingsFromMqtt()
     {
-        _settings = SettingsManager.Load();
-        PopulateSettingsForm();
-        ShowSettings();
+        RequestOpenSettings();
     }
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -1823,29 +1825,23 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         ConfigureGestureFallbackOverlay();
         if (webOk)
+        {
             await ReinjectScriptAsync();
+            ShowKiosk();
+        }
     }
 
     private void BackToKioskButton_Click(object sender, RoutedEventArgs e)
     {
-        ShowKiosk();
+        if (WebView.CoreWebView2 != null)
+            ShowKiosk();
+        else
+            ShowUpdateStatusPopup("WebView2 is not ready. Save settings to retry or exit to Windows.");
     }
 
-    private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
+    private void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
     {
-        if (CheckUpdatesButton == null) return;
-        try
-        {
-            CheckUpdatesButton.IsEnabled = false;
-            await AutoUpdateService.TryManualUpdateWithProgressAsync(msg =>
-            {
-                _ = Dispatcher.BeginInvoke(new Action(() => ShowUpdateStatusPopup(msg)));
-            });
-        }
-        finally
-        {
-            CheckUpdatesButton.IsEnabled = true;
-        }
+        ShowUpdateStatusPopup("GrowBox Panel updates are installed manually from our own tested releases.");
     }
 
     private void ShowUpdateStatusPopup(string message)

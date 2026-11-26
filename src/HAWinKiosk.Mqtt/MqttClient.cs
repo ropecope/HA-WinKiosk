@@ -430,7 +430,8 @@ public class MqttClientService : IDisposable
 
                 return;
             case "page_zoom":
-                if (double.TryParse(p, NumberStyles.Float, CultureInfo.InvariantCulture, out var zoomRaw))
+                if (double.TryParse(p, NumberStyles.Float, CultureInfo.InvariantCulture, out var zoomRaw)
+                    && double.IsFinite(zoomRaw) && zoomRaw >= 25 && zoomRaw <= 225)
                 {
                     _settings.Kiosk.ZoomPercent = KioskConfig.ClampZoomPercent((int)Math.Round(zoomRaw));
                     await PersistSettingsFromMqttAsync(ct);
@@ -676,6 +677,8 @@ public class MqttClientService : IDisposable
     {
         try
         {
+            // A retained command must never replay after restart or resubscription.
+            if (e.ApplicationMessage.Retain) return;
             var topic = e.ApplicationMessage.Topic ?? "";
             var payload = e.ApplicationMessage.PayloadSegment.Count > 0
                 ? Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment)

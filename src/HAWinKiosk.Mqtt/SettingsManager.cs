@@ -107,6 +107,8 @@ public static class SettingsManager
         }
 
         var g = s.Kiosk.Gestures;
+        g.SingleTapAction = NormalizeGestureAction(g.SingleTapAction, "disabled");
+        g.SingleTapLocation = NormalizeTapLocation(g.SingleTapLocation);
         g.DoubleTapAction = NormalizeGestureAction(g.DoubleTapAction, "disabled");
         g.SwipeAction = NormalizeGestureAction(g.SwipeAction, "reload");
         g.TwoFingerSwipeAction = NormalizeGestureAction(g.TwoFingerSwipeAction, "disabled");
@@ -245,7 +247,17 @@ public static class SettingsManager
             .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
             .Build();
         var yaml = serializer.Serialize(file);
-        File.WriteAllText(SettingsPath, yaml);
+        // Write a complete file before replacing the previous configuration.
+        var temp = Path.Combine(AppDataDir, $"settings.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            File.WriteAllText(temp, yaml);
+            File.Move(temp, SettingsPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temp)) File.Delete(temp);
+        }
     }
 
     public static string GetUserDataFolder()
