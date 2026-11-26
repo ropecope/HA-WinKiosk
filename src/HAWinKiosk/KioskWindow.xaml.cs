@@ -46,6 +46,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private bool _mainNavigationSucceeded;
     private bool _openingSettings;
     private bool _navigationFailed;
+    private bool _healthProbeRunning;
+    private int _healthFailures;
     private readonly DispatcherTimer _networkRetryTimer = new() { Interval = TimeSpan.FromSeconds(15) };
 
     public KioskWindow(bool showSettingsFirst = false, bool previewWebViewError = false)
@@ -59,7 +61,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         SettingsButtonPopup.PlacementTarget = this;
         CustomButtonPopup.PlacementTarget = this;
         ContentRendered += (_, _) => UpdateSettingsButtonVisibility();
-        _networkRetryTimer.Tick += (_, _) => RetryFailedNavigation();
+        _networkRetryTimer.Tick += async (_, _) => await CheckConnectionAsync();
         _updatePopupTimer.Interval = TimeSpan.FromSeconds(2.5);
         _updatePopupTimer.Tick += (_, _) =>
         {
@@ -1537,7 +1539,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
         _mainNavigationSucceeded = true;
         _navigationFailed = false;
-        _networkRetryTimer.Stop();
+        _healthFailures = 0;
+        _networkRetryTimer.Start();
         OfflinePanel.Visibility = Visibility.Collapsed;
         if (SettingsPanel.Visibility != Visibility.Visible) WebView.Visibility = Visibility.Visible;
         ApplyPageZoom();
@@ -1565,6 +1568,28 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (SettingsPanel.Visibility != Visibility.Visible) OfflinePanel.Visibility = Visibility.Visible;
         UpdateSettingsButtonVisibility();
         _networkRetryTimer.Start();
+    }
+
+    private async Task CheckConnectionAsync()
+    {
+        if (_isClosing || SettingsPanel.Visibility == Visibility.Visible || _healthProbeRunning) return;
+        if (_navigationFailed) { RetryFailedNavigation(); return; }
+        if (_settings.Kiosk.PanelProfile == "custom" || WebView.CoreWebView2 == null
+            || !KioskUrlPolicy.IsSameOrigin(_settings.Kiosk.Url, WebView.CoreWebView2.Source)) return;
+        _healthProbeRunning = true;
+        try
+        {
+            // Same-origin, unauthenticated request; 401 is expected for a live HA API.
+            var probe = WebView.CoreWebView2.ExecuteScriptAsync("navigator.onLine");
+            // WebView2 does not await returned JS promises; a native HTTP probe runs separately.
+            var online = await AwaitOrTimeout(probe, TimeSpan.FromSeconds(5));
+            if (online == "false") { if (++_healthFailures >= 2) SetNavigationFailed(); return; }
+            var alive = await PanelHealthProbe.IsReachableAsync(_settings.Kiosk.Url, _settings.Kiosk.IgnoreCertificateErrors);
+            if (alive) _healthFailures = 0;
+            else if (++_healthFailures >= 2) SetNavigationFailed();
+        }
+        catch (Exception ex) { PanelLog.Write("Health probe failed", ex); if (++_healthFailures >= 2) SetNavigationFailed(); }
+        finally { _healthProbeRunning = false; }
     }
 
     private void RetryFailedNavigation()
@@ -2095,6 +2120,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private async Task RestartMqttAsync()
     {
+        if (_isClosing) return;
         if (_mqtt == null)
         {
             await StartMqttIfConfiguredAsync();
@@ -2103,10 +2129,12 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         // Avoid publishing camera frames to a client that is about to disconnect.
         _cameraStream.SetMqttClient(null);
-        await _mqtt.DisconnectAsync();
-        _mqtt.Dispose();
+        var old = _mqtt;
         _mqtt = null;
-        await StartMqttIfConfiguredAsync();
+        try { await old.DisconnectAsync(); }
+        catch (Exception ex) { PanelLog.Write("MQTT disconnect error", ex); }
+        finally { old.Dispose(); }
+        if (!_isClosing) await StartMqttIfConfiguredAsync();
     }
 
     protected override void OnClosed(EventArgs e)

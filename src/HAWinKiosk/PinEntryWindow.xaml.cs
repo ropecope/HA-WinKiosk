@@ -87,6 +87,13 @@ public partial class PinEntryWindow : Window
         Close();
     }
 
+    private void Keyboard_Click(object sender, RoutedEventArgs e)
+    {
+        if (ResetPinPanel.Visibility == Visibility.Visible) ResetAnswerBox.Focus();
+        else PinBox.Focus();
+        KioskWindow.ShowTouchKeyboard();
+    }
+
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
         TrySubmit();
