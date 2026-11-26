@@ -1,4 +1,5 @@
 using Microsoft.Web.WebView2.Core;
+using HAWinKiosk.Mqtt;
 
 namespace HAWinKiosk;
 
@@ -15,15 +16,14 @@ public static class HaNavigation
         if (webView == null || string.IsNullOrWhiteSpace(path))
             return;
 
-        var trimmed = path.Trim();
-        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var abs)
-            && (abs.Scheme == Uri.UriSchemeHttp || abs.Scheme == Uri.UriSchemeHttps))
+        var target = KioskUrlPolicy.ResolvePath(kioskBaseUrl, path);
+        if (target == null) return;
+        var haPath = new Uri(target).PathAndQuery + new Uri(target).Fragment;
+        if (!KioskUrlPolicy.IsSameOrigin(kioskBaseUrl, webView.Source))
         {
-            fullNavigate(trimmed);
+            fullNavigate(target);
             return;
         }
-
-        var haPath = trimmed.StartsWith('/') ? trimmed : "/" + trimmed;
         var escaped = System.Text.Json.JsonSerializer.Serialize(haPath);
         // Match Home Assistant frontend navigate(): pushState then location-changed with bubbles/composed/detail.
         var script =
@@ -47,8 +47,7 @@ public static class HaNavigation
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var fullUrl = BuildFullUrl(kioskBaseUrl, haPath);
-        fullNavigate(fullUrl);
+        fullNavigate(target);
     }
 
     internal static string BuildFullUrl(string kioskBaseUrl, string haPath)

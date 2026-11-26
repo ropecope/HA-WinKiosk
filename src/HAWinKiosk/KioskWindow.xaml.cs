@@ -1472,7 +1472,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void OnPermissionRequested(object? sender, CoreWebView2PermissionRequestedEventArgs e)
     {
         if (e.PermissionKind == CoreWebView2PermissionKind.Microphone)
-            e.State = _settings.Kiosk.EnableMic
+            e.State = _settings.Kiosk.EnableMic && KioskUrlPolicy.IsSameOrigin(_settings.Kiosk.Url, e.Uri)
                 ? CoreWebView2PermissionState.Allow
                 : CoreWebView2PermissionState.Deny;
     }
@@ -1596,6 +1596,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         try
         {
+            if (!KioskUrlPolicy.IsSameOrigin(_settings.Kiosk.Url, e.Source)) return;
             var json = e.WebMessageAsJson;
             if (string.IsNullOrWhiteSpace(json)) return;
 
@@ -1752,24 +1753,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
     }
 
-    private static string NormalizeNavigableUrl(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return "about:blank";
-
-        var s = raw.Trim();
-        if (Uri.TryCreate(s, UriKind.Absolute, out var abs)
-            && (abs.Scheme == Uri.UriSchemeHttp || abs.Scheme == Uri.UriSchemeHttps)
-            && !string.IsNullOrWhiteSpace(abs.Host))
-            return abs.ToString();
-
-        // A host:port without a scheme may otherwise parse as a custom URI scheme.
-        if (!s.Contains("://") && Uri.TryCreate($"http://{s}", UriKind.Absolute, out var withHttp)
-            && !string.IsNullOrWhiteSpace(withHttp.Host))
-            return withHttp.ToString();
-
-        return "about:blank";
-    }
+    private static string NormalizeNavigableUrl(string? raw) => KioskUrlPolicy.Normalize(raw);
 
     private async Task StartMqttIfConfiguredAsync()
     {
@@ -1841,10 +1825,18 @@ public partial class KioskWindow : Window, IKioskHostActions
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         ApplyFormToSettings();
-
+        if (_settings.Kiosk.Url == "about:blank")
+        {
+            ShowUpdateStatusPopup("Enter a valid HTTP or HTTPS Home Assistant address.");
+            return;
+        }
+        try { SettingsManager.Save(_settings); }
+        catch (Exception ex)
+        {
+            ShowUpdateStatusPopup("Unable to save settings: " + ex.GetType().Name);
+            return;
+        }
         ApplySettingsUiTheme();
-
-        SettingsManager.Save(_settings);
         PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
         ApplyPageZoom(_settings.Kiosk.ZoomPercent);
         ApplyDoNotDisturbIfEnabled();
