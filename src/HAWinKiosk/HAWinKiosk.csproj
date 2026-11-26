@@ -23,6 +23,10 @@
     <PackageReference Include="YamlDotNet" Version="16.0.0" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(PortableBootstrapper)' != ''">
+    <EmbeddedResource Include="$(PortableBootstrapper)" LogicalName="GrowBox.WebView2Bootstrapper.exe" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\HAWinKiosk.Mqtt\HAWinKiosk.Mqtt.csproj" />
   </ItemGroup>

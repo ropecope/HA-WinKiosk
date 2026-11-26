@@ -12,6 +12,18 @@ public partial class App : System.Windows.Application
 
     private void Application_Startup(object sender, StartupEventArgs e)
     {
+        // CI verifies the actual standalone bundle in an otherwise empty directory.
+        if (e.Args.Contains("--check-portable"))
+        {
+            try
+            {
+                using var mat = new OpenCvSharp.Mat(8, 8, OpenCvSharp.MatType.CV_8UC1);
+                using var bootstrapper = typeof(App).Assembly.GetManifestResourceStream("GrowBox.WebView2Bootstrapper.exe");
+                Shutdown(!mat.Empty() && bootstrapper is { Length: > 0 } ? 0 : 2);
+            }
+            catch { Shutdown(3); }
+            return;
+        }
         _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out var createdNew);
         if (!createdNew)
         {

@@ -40,6 +40,25 @@ jobs:
           name: GrowBox-Panel-x64-preview
           path: publish/
           retention-days: 7
+      - name: Publish portable single EXE
+        shell: pwsh
+        run: |
+          $bootstrapper = (Resolve-Path publish/MicrosoftEdgeWebview2Setup.exe).Path
+          dotnet publish src/HAWinKiosk/HAWinKiosk.csproj -c Release -r win-x64 --self-contained true /p:BundleAsExe=true /p:PublishSingleFile=true /p:IncludeAllContentForSelfExtract=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=false /p:DebugType=none "/p:PortableBootstrapper=$bootstrapper" -o portable
+          if ($LASTEXITCODE -ne 0) { throw "Portable publish failed" }
+          if (-not (Test-Path portable/HAWinKiosk.exe)) { throw "Portable EXE missing" }
+          New-Item -ItemType Directory -Force portable-check | Out-Null
+          Copy-Item portable/HAWinKiosk.exe portable-check/GrowBox-Panel.exe
+          $env:DOTNET_BUNDLE_EXTRACT_BASE_DIR = Join-Path $env:RUNNER_TEMP "growbox-portable-test"
+          $p = Start-Process -FilePath (Resolve-Path portable-check/GrowBox-Panel.exe).Path -ArgumentList '--check-portable' -PassThru
+          if (-not $p.WaitForExit(60000)) { $p.Kill(); throw "Portable smoke test timed out" }
+          if ($p.ExitCode -ne 0) { throw "Portable smoke test failed: $($p.ExitCode)" }
+          Remove-Item Env:DOTNET_BUNDLE_EXTRACT_BASE_DIR
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GrowBox-Panel-portable-exe
+          path: portable-check/GrowBox-Panel.exe
+          retention-days: 7
       - name: Build preview installer
         shell: pwsh
         run: |

@@ -52,3 +52,6 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 ## Owner feedback: simple HA login
 - Removed panel profiles and automatic profile naming from UI, model and YAML conversion. Unknown legacy YAML properties are ignored by the existing deserializer. Existing URL, device name and credentials are not reset. Existing HA reachability check now uses the configured URL without a profile gate.
 - Display retains the original Auto/Light/Dark selector. Dark text inputs, section headers and selected options use neutral gray rather than blue. No new theme selector. Only requested corrections; no new functions without owner approval.
+
+## Portable EXE
+- Separate self-contained single-file x64 artifact with all bundle contents extracted by .NET into its local cache. No installer needed for updates; use the same EXE path, close before replacing, retain existing AppData settings and WebView2 profile. Microsoft bootstrapper embedded for first use. CI tests native OpenCV Mat allocation and embedded resource from an otherwise empty folder. Original multi-file portable ZIP and installer remain available because upstream reported native DLL issues with single-file builds; real camera and WebView2 testing remains required. Initial extraction consumes temporary disk space; no claim of lower RAM usage.
