@@ -197,7 +197,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private static void SelectComboByTag(System.Windows.Controls.ComboBox cb, string tag)
     {
-        var t = tag.ToLowerInvariant();
+        var t = (tag ?? "").ToLowerInvariant();
         foreach (System.Windows.Controls.ComboBoxItem item in cb.Items)
         {
             if (item.Tag?.ToString()?.ToLowerInvariant() == t)
@@ -751,6 +751,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void PopulateSettingsForm()
     {
         UrlBox.Text = _settings.Kiosk.Url ?? "";
+        SelectComboByTag(PanelProfileCombo, _settings.Kiosk.PanelProfile);
+        SoftwareRenderingToggle.IsChecked = _settings.Kiosk.SoftwareRendering;
         DoNotDisturbToggle.IsChecked = _settings.Kiosk.DoNotDisturbEnabled;
         IgnoreCertificateErrorsToggle.IsChecked = _settings.Kiosk.IgnoreCertificateErrors;
         BetaUpdatesToggle.IsChecked = _settings.Kiosk.BetaUpdates;
@@ -1280,7 +1282,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         try
         {
             CoreWebView2EnvironmentOptions? options = null;
-            if (IsWindowsServer())
+            if (IsWindowsServer() || _settings.Kiosk.SoftwareRendering)
             {
                 options = new CoreWebView2EnvironmentOptions
                 {
@@ -1420,6 +1422,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void ShowWebViewInitFailure(bool runtimeMissing, string? detail)
     {
+        PanelLog.Write(runtimeMissing ? "WebView2 runtime missing" : "WebView2 startup failed");
         DisableKioskLockdown();
         PopulateSettingsForm();
         ShowSettings();
@@ -1556,6 +1559,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         if (_isClosing) return;
         _mainNavigationSucceeded = false;
+        if (!_navigationFailed) PanelLog.Write("WebView navigation or process failure");
         _navigationFailed = true;
         WebView.Visibility = Visibility.Collapsed;
         if (SettingsPanel.Visibility != Visibility.Visible) OfflinePanel.Visibility = Visibility.Visible;
@@ -1570,6 +1574,14 @@ public partial class KioskWindow : Window, IKioskHostActions
     }
 
     private void RetryConnection_Click(object sender, RoutedEventArgs e) => RetryFailedNavigation();
+
+    private void SettingsKeyboard_Click(object sender, RoutedEventArgs e) => ShowTouchKeyboard();
+
+    private void ApplyProfileName_Click(object sender, RoutedEventArgs e)
+    {
+        var profile = SelectedTag(PanelProfileCombo, "custom");
+        if (profile != "custom") DeviceNameBox.Text = $"{profile}-panel-{Environment.MachineName}";
+    }
 
     private async Task TryInjectGestureScriptIntoMainAsync()
     {
@@ -1698,7 +1710,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
     }
 
-    private static void ShowTouchKeyboard()
+    internal static void ShowTouchKeyboard()
     {
         try
         {
@@ -1764,7 +1776,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
 
         _mqtt = new MqttClientService();
-        _mqtt.Error += (_, _) => { };
+        _mqtt.Error += (_, ex) => PanelLog.Write("MQTT error", ex);
 
         try
         {
@@ -1823,6 +1835,15 @@ public partial class KioskWindow : Window, IKioskHostActions
     }
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!SaveButton.IsEnabled) return;
+        SaveButton.IsEnabled = false;
+        try { await SaveSettingsAndReturnAsync(); }
+        catch (Exception ex) { PanelLog.Write("Settings apply error", ex); ShowUpdateStatusPopup("Unable to apply settings. See panel.log."); }
+        finally { SaveButton.IsEnabled = true; }
+    }
+
+    private async Task SaveSettingsAndReturnAsync()
     {
         ApplyFormToSettings();
         if (_settings.Kiosk.Url == "about:blank")
@@ -1895,6 +1916,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         var disk = SettingsManager.Load();
 
         _settings.Kiosk.Url = NormalizeNavigableUrl(UrlBox.Text);
+        _settings.Kiosk.PanelProfile = SelectedTag(PanelProfileCombo, "custom");
+        _settings.Kiosk.SoftwareRendering = SoftwareRenderingToggle.IsChecked == true;
         _settings.Kiosk.DoNotDisturbEnabled = DoNotDisturbToggle.IsChecked == true;
         _settings.Kiosk.IgnoreCertificateErrors = IgnoreCertificateErrorsToggle.IsChecked == true;
         _settings.Kiosk.BetaUpdates = BetaUpdatesToggle.IsChecked == true;

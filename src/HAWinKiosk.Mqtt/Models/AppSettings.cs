@@ -32,6 +32,12 @@ public class KioskConfig
     [YamlMember(Alias = "url")]
     public string Url { get; set; } = "http://homeassistant.local:8123";
 
+    [YamlMember(Alias = "panelProfile")]
+    public string PanelProfile { get; set; } = "custom";
+
+    [YamlMember(Alias = "softwareRendering")]
+    public bool SoftwareRendering { get; set; }
+
     /// <summary>
     /// When true, HA WinKiosk enables a "Do Not Disturb"/quiet-hours style mode
     /// by suppressing toast notifications while the kiosk is running.
@@ -105,7 +111,7 @@ public class KioskConfig
 
     /// <summary>When false, kiosk denies microphone permission requests from WebView pages.</summary>
     [YamlMember(Alias = "enableMic")]
-    public bool EnableMic { get; set; } = true;
+    public bool EnableMic { get; set; }
 
     /// <summary>Windows video capture device id; empty = first available camera.</summary>
     [YamlMember(Alias = "cameraDeviceId")]

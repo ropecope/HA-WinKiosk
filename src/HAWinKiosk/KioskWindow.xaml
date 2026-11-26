@@ -287,6 +287,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -297,12 +298,8 @@
                                            Text="Settings"
                                            Style="{StaticResource SettingsPageHeading}"
                                            VerticalAlignment="Center"/>
-                                <StackPanel Grid.Row="0"
-                                            Grid.Column="1"
-                                            Orientation="Horizontal"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                                <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,10,0,0" HorizontalAlignment="Left">
+                                    <StackPanel Visibility="Collapsed" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
                                         <TextBlock Text="Beta updates"
                                                    Style="{StaticResource SettingsToggleRowLabel}"
                                                    Margin="0,0,8,0"/>
@@ -311,7 +308,7 @@
                                                       VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <Button x:Name="CheckUpdatesButton"
-                                            Content="Check &amp; run updates"
+                                            Content="Updates"
                                             Style="{StaticResource SecondaryActionButton}"
                                             Background="{DynamicResource Theme.Button.SecondaryBg}"
                                             Foreground="{DynamicResource Theme.Button.SecondaryFg}"
@@ -335,10 +332,11 @@
                                             BorderBrush="{DynamicResource Theme.Button.SecondaryBorder}"
                                             Margin="12,0,0,0"
                                             Click="ExitToWindows_Click"/>
-                                </StackPanel>
+                                    <Button Content="Keyboard" MinHeight="40" Margin="8,4,0,4" Padding="12,8" Click="SettingsKeyboard_Click"/>
+                                </WrapPanel>
                                 <Border x:Name="UpdateStatusPopup"
-                                        Grid.Row="1"
-                                        Grid.Column="1"
+                                        Grid.Row="2"
+                                        Grid.ColumnSpan="2"
                                         Margin="0,12,0,0"
                                         Padding="12,8"
                                         HorizontalAlignment="Right"
@@ -366,6 +364,15 @@
 
                             <StackPanel Grid.Column="0">
                                 <settings:SettingsSection Header="Kiosk">
+                                    <TextBlock Text="Panel profile" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="PanelProfileCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,8">
+                                        <ComboBoxItem Content="GrowBox" Tag="growbox"/>
+                                        <ComboBoxItem Content="MycoBox" Tag="mycobox"/>
+                                        <ComboBoxItem Content="GreenBox" Tag="greenbox"/>
+                                        <ComboBoxItem Content="Central panel" Tag="central"/>
+                                        <ComboBoxItem Content="Custom" Tag="custom"/>
+                                    </ComboBox>
+                                    <Button Content="Apply profile device name" Margin="0,0,0,10" MinHeight="40" Click="ApplyProfileName_Click"/>
                                     <TextBlock Text="Kiosk URL" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBox x:Name="UrlBox" Text="http://homeassistant.local:8123" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
 
@@ -433,6 +440,8 @@
                                 </settings:SettingsSection>
 
                                 <settings:SettingsSection Header="Display">
+                                    <CheckBox x:Name="SoftwareRenderingToggle" Content="Disable GPU acceleration" Margin="0,0,0,8"/>
+                                    <TextBlock Text="Optional for older graphics drivers. Restart the panel after changing." TextWrapping="Wrap" Style="{StaticResource SettingsHintText}" Margin="0,0,0,10"/>
                                     <TextBlock Text="Theme" Style="{StaticResource SettingsItemLabel}"/>
                                     <ComboBox x:Name="ThemeModeCombo"
                                               Style="{StaticResource SettingsComboBox}"

@@ -8,22 +8,22 @@ public partial class App : System.Windows.Application
 {
     private const string SingleInstanceMutexName = "GrowBox-Panel-SingleInstance";
     private Mutex? _singleInstanceMutex;
+    private bool _ownsMutex;
 
     private void Application_Startup(object sender, StartupEventArgs e)
     {
-        // Recover if a previous crash/kill left the taskbar hidden.
-        KioskWindow.RestoreTaskbar();
-        DispatcherUnhandledException += (_, _) => KioskWindow.RestoreTaskbar();
-        AppDomain.CurrentDomain.UnhandledException += (_, _) => KioskWindow.RestoreTaskbar();
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => KioskWindow.RestoreTaskbar();
-
         _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out var createdNew);
         if (!createdNew)
         {
-            System.Windows.MessageBox.Show("HA WinKiosk is already running.", "HA WinKiosk", MessageBoxButton.OK, MessageBoxImage.Information);
-            Shutdown(1);
+            Shutdown(0);
             return;
         }
+        _ownsMutex = true;
+        KioskWindow.RestoreTaskbar();
+        DispatcherUnhandledException += (_, args) => { KioskWindow.RestoreTaskbar(); PanelLog.Write("Unhandled UI error", args.Exception); };
+        AppDomain.CurrentDomain.UnhandledException += (_, _) => KioskWindow.RestoreTaskbar();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => KioskWindow.RestoreTaskbar();
+        PanelLog.Write("Panel startup");
 
         var previewWebViewError = e.Args.Any(a =>
             string.Equals(a, "--preview-webview-error", StringComparison.OrdinalIgnoreCase));
@@ -39,8 +39,11 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        KioskWindow.RestoreTaskbar();
-        _singleInstanceMutex?.ReleaseMutex();
+        if (_ownsMutex)
+        {
+            KioskWindow.RestoreTaskbar();
+            _singleInstanceMutex?.ReleaseMutex();
+        }
         _singleInstanceMutex?.Dispose();
         base.OnExit(e);
     }

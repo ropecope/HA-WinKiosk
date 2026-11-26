@@ -23,6 +23,12 @@ public sealed class ConfigSectionV2
     [YamlMember(Alias = "url")]
     public string Url { get; set; } = "http://homeassistant.local:8123";
 
+    [YamlMember(Alias = "panelProfile")]
+    public string PanelProfile { get; set; } = "custom";
+
+    [YamlMember(Alias = "softwareRendering")]
+    public bool SoftwareRendering { get; set; }
+
     [YamlMember(Alias = "ignoreCertificateErrors")]
     public bool IgnoreCertificateErrors { get; set; }
 
@@ -76,7 +82,7 @@ public sealed class ConfigSectionV2
     public string InputDeviceId { get; set; } = "";
 
     [YamlMember(Alias = "enableMic")]
-    public bool EnableMic { get; set; } = true;
+    public bool EnableMic { get; set; }
 
     [YamlMember(Alias = "cameraDeviceId")]
     public string CameraDeviceId { get; set; } = "";
@@ -140,6 +146,8 @@ public static class SettingsYamlConversion
         var s = new AppSettings();
         var c = v.Config ?? new ConfigSectionV2();
         s.Kiosk.Url = c.Url;
+        s.Kiosk.PanelProfile = c.PanelProfile;
+        s.Kiosk.SoftwareRendering = c.SoftwareRendering;
         s.Kiosk.IgnoreCertificateErrors = c.IgnoreCertificateErrors;
         s.Kiosk.DoNotDisturbEnabled = c.DoNotDisturb;
         s.Kiosk.Pin = c.Pin;
@@ -189,6 +197,8 @@ public static class SettingsYamlConversion
             Config = new ConfigSectionV2
             {
                 Url = s.Kiosk.Url,
+                PanelProfile = s.Kiosk.PanelProfile,
+                SoftwareRendering = s.Kiosk.SoftwareRendering,
                 IgnoreCertificateErrors = s.Kiosk.IgnoreCertificateErrors,
                 DoNotDisturb = s.Kiosk.DoNotDisturbEnabled,
                 PinHint = s.Kiosk.PinHint,
