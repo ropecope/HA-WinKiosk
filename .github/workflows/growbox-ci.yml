@@ -28,6 +28,9 @@ jobs:
       - name: Publish x64
         shell: pwsh
         run: dotnet publish src/HAWinKiosk/HAWinKiosk.csproj -c Release -r win-x64 --self-contained true /p:BundleAsExe=true /p:PublishSingleFile=false -o publish
+      - name: Include verified WebView2 bootstrapper
+        shell: pwsh
+        run: ./tools/Add-WebView2Bootstrapper.ps1 -PublishDir publish
       - name: Verify output
         shell: pwsh
         run: |

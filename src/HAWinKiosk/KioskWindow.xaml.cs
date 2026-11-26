@@ -109,6 +109,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         {
             PopulateSettingsForm();
             ShowSettings();
+            if (!WebView2Prerequisites.IsInstalled()) await CheckRequiredComponentsAsync();
         }
         else
         {
@@ -1441,7 +1442,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         ShowSettings();
 
         var message = runtimeMissing
-            ? "Microsoft Edge WebView2 Runtime was not found. Windows Server does not include it by default.\n\nInstall the Evergreen Runtime from https://developer.microsoft.com/microsoft-edge/webview2/ then click Save."
+            ? "Microsoft Edge WebView2 Runtime was not found.\n\nUse Check components in Settings to install it, then click Save."
               + (string.IsNullOrWhiteSpace(detail) ? "" : $"\n\n{detail}")
             : $"The kiosk page could not start.\n\n{(string.IsNullOrWhiteSpace(detail) ? "Unknown error." : detail)}";
 
@@ -1658,6 +1659,35 @@ public partial class KioskWindow : Window, IKioskHostActions
     }
 
     private void SettingsKeyboard_Click(object sender, RoutedEventArgs e) => ShowTouchKeyboard();
+
+    private async void CheckComponents_Click(object sender, RoutedEventArgs e) => await CheckRequiredComponentsAsync();
+
+    private async Task CheckRequiredComponentsAsync()
+    {
+        if (!CheckComponentsButton.IsEnabled || _isClosing) return;
+        if (WebView2Prerequisites.IsInstalled())
+        {
+            ShowUpdateStatusPopup("Required WebView2 Runtime is installed. .NET is included in the app.");
+            return;
+        }
+        DisableKioskLockdown();
+        if (System.Windows.MessageBox.Show(this, "Microsoft Edge WebView2 Runtime is missing. Install it now? Internet access may be required.", "GrowBox Panel - required components", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        CheckComponentsButton.IsEnabled = false;
+        SaveButton.IsEnabled = false;
+        try
+        {
+            ShowUpdateStatusPopup("Installing Microsoft WebView2 Runtime...");
+            var ok = await WebView2Prerequisites.InstallAsync();
+            if (!_isClosing)
+                System.Windows.MessageBox.Show(this, ok ? "WebView2 is installed. Enter the HA address and click Save." : "Installation not confirmed. Check internet access, or use the official Evergreen Standalone installer. Then click Check components again.", "GrowBox Panel", MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            PanelLog.Write("WebView2 installation error", ex);
+            if (!_isClosing) ShowUpdateStatusPopup("WebView2 installation failed. Check internet access and retry.");
+        }
+        finally { CheckComponentsButton.IsEnabled = true; SaveButton.IsEnabled = true; }
+    }
 
     private void ApplyProfileName_Click(object sender, RoutedEventArgs e)
     {

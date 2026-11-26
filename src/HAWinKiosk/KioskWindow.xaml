@@ -333,6 +333,7 @@
                                             Margin="12,0,0,0"
                                             Click="ExitToWindows_Click"/>
                                     <Button Content="Keyboard" MinHeight="40" Margin="8,4,0,4" Padding="12,8" Click="SettingsKeyboard_Click"/>
+                                    <Button x:Name="CheckComponentsButton" Content="Check components" MinHeight="40" Margin="8,4,0,4" Padding="12,8" Click="CheckComponents_Click"/>
                                 </WrapPanel>
                                 <Border x:Name="UpdateStatusPopup"
                                         Grid.Row="2"

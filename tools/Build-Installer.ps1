@@ -73,6 +73,7 @@ if (-not (Test-Path $publishDir)) {
     throw "Publish output not found: $publishDir (check dotnet publish / Build-ExeFromGDrive.ps1)"
 }
 
+& (Join-Path $SourceRoot 'tools\Add-WebView2Bootstrapper.ps1') -PublishDir $publishDir
 Write-Host "Installer source: $publishDir"
 
 & $iscc "/DMyAppVersion=$appVersion" "/DPublishDir=$publishDir" $issFile
