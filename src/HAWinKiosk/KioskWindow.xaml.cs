@@ -1473,7 +1473,7 @@ public partial class KioskWindow : Window, IKioskHostActions
                 System.Windows.MessageBox.Show(
                     this,
                     message,
-                    "HA WinKiosk",
+                    "HMI_Panel",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
@@ -1688,7 +1688,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             return;
         }
         DisableKioskLockdown();
-        if (System.Windows.MessageBox.Show(this, "Microsoft Edge WebView2 Runtime is missing. Install it now? Internet access may be required.", "GrowBox Panel - required components", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (System.Windows.MessageBox.Show(this, "Microsoft Edge WebView2 Runtime is missing. Install it now? Internet access may be required.", "HMI_Panel - required components", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         _componentCheckRunning = true;
         CheckComponentsButton.IsEnabled = false;
         SaveButton.IsEnabled = false;
@@ -2056,7 +2056,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
     {
-        ShowUpdateStatusPopup("GrowBox Panel updates are installed manually from our own tested releases.");
+        ShowUpdateStatusPopup("HMI_Panel updates are installed manually from our own tested releases.");
     }
 
     private void ShowUpdateStatusPopup(string message)

@@ -1,4 +1,4 @@
-name: GrowBox Panel Windows CI
+name: HMI_Panel Windows CI
 
 on:
   push:
@@ -42,9 +42,12 @@ jobs:
             if (Test-Path $log) { Get-Content $log }
             throw "Camera UI test failed: $($p.ExitCode)"
           }
+      - name: Name the portable executable
+        shell: pwsh
+        run: Rename-Item publish/HAWinKiosk.exe HMI_Panel.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: GrowBox-Panel-x64-preview
+          name: HMI_Panel-x64-portable
           path: publish/
           retention-days: 7
       - name: Publish portable single EXE
@@ -54,7 +57,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Portable publish failed" }
           if (-not (Test-Path portable/HAWinKiosk.exe)) { throw "Portable EXE missing" }
           New-Item -ItemType Directory -Force portable-check | Out-Null
-          Copy-Item portable/HAWinKiosk.exe portable-check/GrowBox-Panel.exe
+          Copy-Item portable/HAWinKiosk.exe portable-check/HMI_Panel.exe
           $env:DOTNET_BUNDLE_EXTRACT_BASE_DIR = Join-Path $env:RUNNER_TEMP "growbox-portable-test"
           $p = Start-Process -FilePath (Resolve-Path portable-check/GrowBox-Panel.exe).Path -ArgumentList '--check-portable' -PassThru
           if (-not $p.WaitForExit(60000)) { $p.Kill(); throw "Portable smoke test timed out" }
@@ -62,29 +65,6 @@ jobs:
           Remove-Item Env:DOTNET_BUNDLE_EXTRACT_BASE_DIR
       - uses: actions/upload-artifact@v4
         with:
-          name: GrowBox-Panel-portable-exe
+          name: HMI_Panel-exe
           path: portable-check/GrowBox-Panel.exe
-          retention-days: 7
-      - name: Include verified WebView2 bootstrapper for installer only
-        shell: pwsh
-        run: ./tools/Add-WebView2Bootstrapper.ps1 -PublishDir publish
-      - name: Build preview installer
-        shell: pwsh
-        run: |
-          $iscc = @("C:\Program Files (x86)\Inno Setup 6\ISCC.exe", "C:\Program Files\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $iscc) {
-            choco install innosetup -y
-            if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed" }
-            $iscc = @("C:\Program Files (x86)\Inno Setup 6\ISCC.exe", "C:\Program Files\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
-          }
-          if (-not $iscc) { throw "ISCC unavailable" }
-          $publishDir = (Resolve-Path publish).Path
-          & $iscc "/DPublishDir=$publishDir" installer/HAWinKiosk.iss
-          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
-          if (-not (Test-Path installer/output/HAWinKiosk-Setup.exe)) { throw "Installer missing" }
-          Copy-Item installer/output/HAWinKiosk-Setup.exe GrowBox-Panel-Preview-Setup.exe
-      - uses: actions/upload-artifact@v4
-        with:
-          name: GrowBox-Panel-preview-installer
-          path: GrowBox-Panel-Preview-Setup.exe
           retention-days: 7

@@ -1,4 +1,4 @@
-# GrowBox Panel
+# HMI_Panel
 
 Baseline upstream v3.30.2, commit 11820437b2459b87d02692082c86563cf10cec4c. Original main remains clean. Product target: touch-only Windows companion for GrowBox, MycoBox and GreenBox, with existing HA dashboards. Keep general HA compatibility and GPL-3.0.
 
@@ -65,3 +65,6 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 - Follow-up review: camera list is disabled while enumerating, persisted camera is populated before asynchronous enumeration, and camera application requests are serialized. OpenCV opening/configuration runs on a worker, enumeration has a 15 s timeout, failed reads are paced. CI now exercises the actual WPF camera controls in all four modes without hardware. This is a UI regression check, not a real camera or display wake test. No new user features.
 
 - Fixed slider range initialization: WPF Slider and SettingsSliderRow had different defaults, so setting Maximum to the wrapper's default 100 could skip the change callback. Explicit range initialization and synchronized value label. UI regression covers real slider minimum, maximum, and value/label synchronization for sensitivity, hold time and FPS. Hardware touch dragging remains unverified.
+
+## HMI_Panel portable preview
+- Product renamed to HMI_Panel in UI, executable artifact and product metadata; fresh default MQTT device name is hmi-panel-{machine}. Existing device names are unchanged. Internal source namespaces, branch, mutex, installer sources and legacy AppData directory remain for compatibility during tablet testing. No data migration, no HA login reset. CI builds portable single EXE and portable directory only, no Setup and no bundled WebView2 bootstrapper. Includes previous camera visibility and slider corrections. GrowBox theme deferred as agreed.

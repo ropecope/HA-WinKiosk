@@ -5,7 +5,7 @@
         xmlns:local="clr-namespace:HAWinKiosk"
         xmlns:settings="clr-namespace:HAWinKiosk.Settings"
         xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF"
-        Title="GrowBox Panel"
+        Title="HMI_Panel"
         WindowStyle="None"
         ResizeMode="NoResize"
         Topmost="False"
@@ -141,7 +141,7 @@
                 <wv2:WebView2 x:Name="WebView"/>
                 <Border x:Name="OfflinePanel" Visibility="Collapsed" Background="#182126" Padding="24" Panel.ZIndex="600">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="500">
-                        <TextBlock Text="GrowBox Panel" Foreground="#DCE8EC" FontSize="28" TextAlignment="Center" Margin="0,0,0,16"/>
+                        <TextBlock Text="HMI_Panel" Foreground="#DCE8EC" FontSize="28" TextAlignment="Center" Margin="0,0,0,16"/>
                         <TextBlock Text="Home Assistant is unavailable" Foreground="#FFFFFF" FontSize="21" TextWrapping="Wrap" TextAlignment="Center"/>
                         <TextBlock Text="No live data. Retrying automatically every 15 seconds." Foreground="#B6C7CD" FontSize="16" TextWrapping="Wrap" TextAlignment="Center" Margin="0,12,0,20"/>
                         <Button Content="Retry connection" Click="RetryConnection_Click" Padding="14,10" MinHeight="44"/>
@@ -214,7 +214,7 @@
                                VerticalAlignment="Center"
                                Margin="0,0,10,0"/>
                     <TextBlock Grid.Column="1"
-                               Text="The current version of GrowBox Panel includes breaking changes. Make sure to check the releases page for any changes required."
+                               Text="The current version of HMI_Panel includes breaking changes. Make sure to check the releases page for any changes required."
                                FontSize="12"
                                Foreground="{DynamicResource Theme.BreakingChanges.Fg}"
                                TextWrapping="Wrap"
@@ -530,7 +530,7 @@
                                                       Checked="LockdownEnabledToggle_Changed"
                                                       Unchecked="LockdownEnabledToggle_Changed"/>
                                     </Grid>
-                                    <TextBlock Text="When off, GrowBox Panel runs as a normal Windows app (taskbar visible, no kiosk key blocking)."
+                                    <TextBlock Text="When off, HMI_Panel runs as a normal Windows app (taskbar visible, no kiosk key blocking)."
                                                Style="{StaticResource SettingsHintText}"
                                                Margin="0,0,0,10"/>
 

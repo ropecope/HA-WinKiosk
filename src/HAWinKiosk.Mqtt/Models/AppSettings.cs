@@ -268,7 +268,7 @@ public class MqttConfig
     public string? Password { get; set; }
 
     [YamlMember(Alias = "deviceName")]
-    public string DeviceName { get; set; } = $"growbox-panel-{Environment.MachineName}";
+    public string DeviceName { get; set; } = $"hmi-panel-{Environment.MachineName}";
 
     [YamlMember(Alias = "discoveryPrefix")]
     public string DiscoveryPrefix { get; set; } = "homeassistant";

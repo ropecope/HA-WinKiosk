@@ -1,4 +1,4 @@
-# GrowBox Panel development rules
+# HMI_Panel development rules
 
 - `main` mirrors upstream kattcrazy/HA-WinKiosk. Never commit GrowBox changes there.
 - Develop only on `growbox` or temporary branches based on it. Preserve GPL-3.0, upstream notices and history.
@@ -10,3 +10,5 @@
 - Record changes and limitations in docs/growbox/STATUS.md. Prefer conservative defaults and explicit opt-in for remote system commands.
 
 - Do not add new features or settings without the owner's explicit agreement. Keep the original settings layout and HA login flow unless a requested change requires otherwise.
+
+- Product identity is HMI_Panel, a universal web kiosk. GrowBox is only a future optional theme. Preserve existing local settings, WebView2 session and device identity during the rename. For this development build, produce portable EXE/ZIP only; retain installer source for later use.
