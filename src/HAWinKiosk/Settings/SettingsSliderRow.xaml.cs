@@ -38,7 +38,9 @@ public partial class SettingsSliderRow : System.Windows.Controls.UserControl
                 {
                     if (Math.Abs(r.ValueSlider.Value - v) > 0.001)
                         r.ValueSlider.Value = v;
-                    r.ValueLabel.Text = ((int)Math.Round(v)).ToString();
+                    r.ValueLabel.Text = ((int)Math.Round(r.ValueSlider.Value)).ToString();
+                    if (Math.Abs(r.ValueSlider.Value - v) > 0.001)
+                        r.SetCurrentValue(ValueProperty, r.ValueSlider.Value);
                 }
             }));
 
@@ -47,6 +49,12 @@ public partial class SettingsSliderRow : System.Windows.Controls.UserControl
     public SettingsSliderRow()
     {
         InitializeComponent();
+        // A dependency property's default does not invoke its changed callback.
+        // WPF Slider has its own default range, so initialize it explicitly.
+        ValueSlider.Minimum = Minimum;
+        ValueSlider.Maximum = Maximum;
+        ValueSlider.Value = Value;
+        ValueLabel.Text = ((int)Math.Round(ValueSlider.Value)).ToString();
         ValueSlider.ValueChanged += (_, e) =>
         {
             SetCurrentValue(ValueProperty, e.NewValue);
@@ -80,4 +88,5 @@ public partial class SettingsSliderRow : System.Windows.Controls.UserControl
     }
 
     public Slider Slider => ValueSlider;
+    internal string DisplayedValue => ValueLabel.Text;
 }

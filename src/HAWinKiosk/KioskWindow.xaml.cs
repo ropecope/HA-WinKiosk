@@ -753,9 +753,25 @@ public partial class KioskWindow : Window, IKioskHostActions
         var stream = MotionWakeOptionsPanel.Visibility == Visibility.Collapsed
             && CameraStreamOptionsPanel.Visibility == Visibility.Visible;
         SelectComboByTag(CameraStreamModeSelect.ComboBox, "off");
-        return motion && presence && stream && CameraStreamModeSelect.Items.Count == 4
+        // Verify the underlying Slider, not only the wrapper's dependency properties.
+        var ranges = CheckSliderRange(MotionSensitivitySlider, 1, 100)
+            && CheckSliderRange(MotionHoldSlider, 1, 60)
+            && CheckSliderRange(CameraFpsSlider, 1, 15);
+        return ranges && motion && presence && stream && CameraStreamModeSelect.Items.Count == 4
             && MotionWakeOptionsPanel.Visibility == Visibility.Collapsed
             && CameraStreamOptionsPanel.Visibility == Visibility.Collapsed;
+    }
+
+    private static bool CheckSliderRange(SettingsSliderRow row, int min, int max)
+    {
+        if (row.Slider.Minimum != min || row.Slider.Maximum != max) return false;
+        var previous = row.Value;
+        row.Slider.Value = max;
+        var upper = row.Value == max && row.DisplayedValue == max.ToString();
+        row.Slider.Value = min;
+        var lower = row.Value == min && row.DisplayedValue == min.ToString();
+        row.Value = previous;
+        return upper && lower && row.Slider.Value == previous;
     }
 
     private void PopulateSettingsForm()

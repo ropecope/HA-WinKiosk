@@ -12,6 +12,8 @@
             <Slider x:Name="ValueSlider"
                     Grid.Column="0"
                     Style="{DynamicResource SettingsSlider}"
+                    Minimum="0"
+                    Maximum="100"
                     TickFrequency="1"
                     IsSnapToTickEnabled="True"
                     VerticalAlignment="Center"
