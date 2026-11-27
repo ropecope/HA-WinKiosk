@@ -9,7 +9,7 @@ This section lets another agent continue without the chat history. Older section
 ### Repository and locations
 - GitHub: `https://github.com/ropecope/HA-WinKiosk`. Branch `growbox` = HMI_Panel development; branch `main` = untouched mirror of upstream kattcrazy/HA-WinKiosk (do not commit there). `growbox` is 24 commits ahead of `main`.
 - Last confirmed code commit: `e342b04` (2026-11-27 00:45 UTC) "Fix both stale portable EXE paths after HMI_Panel rename". Documentation-only commits may follow it.
-- No local working copy of the source exists on the owner's workstation; work from a fresh clone of `growbox`. Local artifact: `C:\Users\Petar\Desktop\HMI_Panel-exe.zip` (113,272,597 bytes) containing `HMI_Panel.exe` (285,636,376 bytes). Its size matches exactly the CI artifact `HMI_Panel-exe` of run 45918598932 for `e342b04`, so it is that build.
+- No local working copy of the source exists on the owner's workstation; work from a fresh clone of `growbox`. Local artifact: `%USERPROFILE%\Desktop\HMI_Panel-exe.zip` (113,272,597 bytes) containing `HMI_Panel.exe` (285,636,376 bytes). Its size matches exactly the CI artifact `HMI_Panel-exe` of run 45918598932 for `e342b04`, so it is that build.
 - Settings and WebView2 profile: `%APPDATA%\GrowBox-Panel` (legacy name kept on purpose), log `panel.log` there. Single-instance mutex `GrowBox-Panel-SingleInstance`.
 
 ### Build and artifacts
