@@ -32,6 +32,16 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path publish/HAWinKiosk.exe)) { throw "Missing published executable" }
+      - name: Camera settings UI regression
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath (Resolve-Path publish/HAWinKiosk.exe).Path -ArgumentList '--check-camera-ui' -PassThru
+          if (-not $p.WaitForExit(60000)) { $p.Kill(); throw "Camera UI test timed out" }
+          if ($p.ExitCode -ne 0) {
+            $log = Join-Path $env:TEMP "growbox-camera-ui-test.log"
+            if (Test-Path $log) { Get-Content $log }
+            throw "Camera UI test failed: $($p.ExitCode)"
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: GrowBox-Panel-x64-preview

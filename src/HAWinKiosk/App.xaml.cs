@@ -12,6 +12,21 @@ public partial class App : System.Windows.Application
 
     private void Application_Startup(object sender, StartupEventArgs e)
     {
+        if (e.Args.Contains("--check-camera-ui"))
+        {
+            try
+            {
+                ThemePalette.ApplyAppWide(true);
+                var window = new KioskWindow(true);
+                Shutdown(window.CheckCameraSettingsUi() ? 0 : 4);
+            }
+            catch (Exception ex)
+            {
+                System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "growbox-camera-ui-test.log"), ex.ToString());
+                Shutdown(5);
+            }
+            return;
+        }
         // CI verifies the actual standalone bundle in an otherwise empty directory.
         if (e.Args.Contains("--check-portable"))
         {

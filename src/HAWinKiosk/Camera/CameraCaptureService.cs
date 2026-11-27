@@ -68,7 +68,7 @@ public sealed class CameraCaptureService : IDisposable
         _fps = localMotion ? 2 : Math.Clamp(fps, 1, 15);
         _framesEncoded = 0;
 
-        var listed = await ListDevicesAsync();
+        var listed = await ListDevicesAsync().WaitAsync(TimeSpan.FromSeconds(15));
         Log($"StartAsync device='{deviceId}' fps={_fps} listed={listed.Count}");
         foreach (var (id, name) in listed)
             Log($"  - {name}");
@@ -94,22 +94,28 @@ public sealed class CameraCaptureService : IDisposable
         Log($"Opening OpenCV index={index} name={listed[index].Name}");
 
         // Prefer MSMF, then DSHOW - both bypass broken WinRT MediaCapture on this machine.
-        _capture = OpenCapture(index, VideoCaptureAPIs.MSMF)
-                   ?? OpenCapture(index, VideoCaptureAPIs.DSHOW)
-                   ?? OpenCapture(index, VideoCaptureAPIs.ANY);
-
-        if (_capture is null || !_capture.IsOpened())
-            throw new InvalidOperationException("OpenCvSharp could not open the camera.");
-
-        // MSMF/DSHOW often default to 640x480 if unset - ask for the highest mode the driver accepts.
-        if (localMotion)
+        var opened = await Task.Run(() =>
         {
-            _capture.FrameWidth = 320;
-            _capture.FrameHeight = 240;
-            _capture.Fps = 2;
-        }
-        else PreferHighestResolution(_capture);
-        Log($"OpenCV opened backend={_capture.GetBackendName()} size={_capture.FrameWidth}x{_capture.FrameHeight}");
+            var cap = OpenCapture(index, VideoCaptureAPIs.MSMF)
+                      ?? OpenCapture(index, VideoCaptureAPIs.DSHOW)
+                      ?? OpenCapture(index, VideoCaptureAPIs.ANY);
+            if (cap is null) throw new InvalidOperationException("OpenCvSharp could not open the camera.");
+            try
+            {
+                if (localMotion)
+                {
+                    cap.FrameWidth = 320;
+                    cap.FrameHeight = 240;
+                    cap.Fps = 2;
+                }
+                else PreferHighestResolution(cap);
+                Log($"OpenCV opened backend={cap.GetBackendName()} size={cap.FrameWidth}x{cap.FrameHeight}");
+                return cap;
+            }
+            catch { cap.Dispose(); throw; }
+        });
+        if (_disposed) { opened.Dispose(); throw new ObjectDisposedException(nameof(CameraCaptureService)); }
+        _capture = opened;
 
         _loopCts = new CancellationTokenSource();
         var token = _loopCts.Token;
@@ -251,7 +257,7 @@ public sealed class CameraCaptureService : IDisposable
 
                 if (!cap.Read(frame) || frame.Empty())
                 {
-                    Thread.Sleep(40);
+                    if (token.WaitHandle.WaitOne(Math.Max(100, intervalMs))) break;
                     continue;
                 }
 

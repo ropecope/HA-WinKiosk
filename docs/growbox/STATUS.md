@@ -61,3 +61,5 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 
 ## Camera visibility fix
 - Camera is a separate visible settings section rather than hidden under Audio if Windows enumeration fails. Device enumeration permits up to 15 s, reports timeout/error/no devices, and has a manual refresh button. Mode and configured camera ID are not reset when enumeration fails. Runtime camera errors are visible in settings; camera off does not need enumeration to start kiosk. Existing local detection algorithms and HA unchanged. Verify two-camera discovery, driver/privacy access and wake on real Fusion5.
+
+- Follow-up review: camera list is disabled while enumerating, persisted camera is populated before asynchronous enumeration, and camera application requests are serialized. OpenCV opening/configuration runs on a worker, enumeration has a 15 s timeout, failed reads are paced. CI now exercises the actual WPF camera controls in all four modes without hardware. This is a UI regression check, not a real camera or display wake test. No new user features.
