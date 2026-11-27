@@ -68,3 +68,5 @@ Initial review covers central WPF, configuration, MQTT, update and installer pat
 
 ## HMI_Panel portable preview
 - Product renamed to HMI_Panel in UI, executable artifact and product metadata; fresh default MQTT device name is hmi-panel-{machine}. Existing device names are unchanged. Internal source namespaces, branch, mutex, installer sources and legacy AppData directory remain for compatibility during tablet testing. No data migration, no HA login reset. CI builds portable single EXE and portable directory only, no Setup and no bundled WebView2 bootstrapper. Includes previous camera visibility and slider corrections. GrowBox theme deferred as agreed.
+
+- CI rename follow-up: corrected both remaining old executable paths in the portable smoke test and artifact upload. The preceding run compiled successfully and passed regression/WPF tests; single-EXE packaging failed only because the test referenced the old filename.

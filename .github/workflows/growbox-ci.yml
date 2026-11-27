@@ -59,12 +59,12 @@ jobs:
           New-Item -ItemType Directory -Force portable-check | Out-Null
           Copy-Item portable/HAWinKiosk.exe portable-check/HMI_Panel.exe
           $env:DOTNET_BUNDLE_EXTRACT_BASE_DIR = Join-Path $env:RUNNER_TEMP "growbox-portable-test"
-          $p = Start-Process -FilePath (Resolve-Path portable-check/GrowBox-Panel.exe).Path -ArgumentList '--check-portable' -PassThru
+          $p = Start-Process -FilePath (Resolve-Path portable-check/HMI_Panel.exe).Path -ArgumentList '--check-portable' -PassThru
           if (-not $p.WaitForExit(60000)) { $p.Kill(); throw "Portable smoke test timed out" }
           if ($p.ExitCode -ne 0) { throw "Portable smoke test failed: $($p.ExitCode)" }
           Remove-Item Env:DOTNET_BUNDLE_EXTRACT_BASE_DIR
       - uses: actions/upload-artifact@v4
         with:
           name: HMI_Panel-exe
-          path: portable-check/GrowBox-Panel.exe
+          path: portable-check/HMI_Panel.exe
           retention-days: 7
