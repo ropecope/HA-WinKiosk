@@ -2,6 +2,54 @@
 
 Baseline upstream v3.30.2, commit 11820437b2459b87d02692082c86563cf10cec4c. Original main remains clean. Product target: touch-only Windows companion for GrowBox, MycoBox and GreenBox, with existing HA dashboards. Keep general HA compatibility and GPL-3.0.
 
+## Current state and handover (2026-11-27)
+
+This section lets another agent continue without the chat history. Older sections below are the chronological change log. Legend: **built+CI** = compiled and passed the automated CI checks; **HW?** = not verified on the real tablet.
+
+### Repository and locations
+- GitHub: `https://github.com/ropecope/HA-WinKiosk`. Branch `growbox` = HMI_Panel development; branch `main` = untouched mirror of upstream kattcrazy/HA-WinKiosk (do not commit there). `growbox` is 24 commits ahead of `main`.
+- Last confirmed code commit: `e342b04` (2026-11-27 00:45 UTC) "Fix both stale portable EXE paths after HMI_Panel rename". Documentation-only commits may follow it.
+- No local working copy of the source exists on the owner's workstation; work from a fresh clone of `growbox`. Local artifact: `C:\Users\Petar\Desktop\HMI_Panel-exe.zip` (113,272,597 bytes) containing `HMI_Panel.exe` (285,636,376 bytes). Its size matches exactly the CI artifact `HMI_Panel-exe` of run 45918598932 for `e342b04`, so it is that build.
+- Settings and WebView2 profile: `%APPDATA%\GrowBox-Panel` (legacy name kept on purpose), log `panel.log` there. Single-instance mutex `GrowBox-Panel-SingleInstance`.
+
+### Build and artifacts
+- CI workflow `.github/workflows/growbox-ci.yml` ("HMI_Panel Windows CI"): build, `tests/GrowBox.Smoke` regression smoke tests, x64 self-contained publish, camera settings WPF UI regression, portable directory artifact and single-file EXE artifact.
+- `e342b04`: CI **success**. Artifacts `HMI_Panel-x64-portable` (multi-file directory, recommended fallback on 2 GB tablets) and `HMI_Panel-exe` (single file). Both expire 2026-12-04; re-run CI or keep a copy if needed later.
+- `d7aa6b5`: CI failed in "Publish portable single EXE" only because the smoke test still used the old executable name; fixed in `e342b04`.
+- No installer is produced in this phase (owner decision); installer sources and `release-installer.yml` remain for later. No release has been published. Builds are unsigned previews.
+- No local build was made on the workstation. Startup speed, RAM and CPU have not been measured on the device.
+
+### Feature status
+| Area | Status |
+|---|---|
+| Rename to HMI_Panel (UI, EXE, metadata; default MQTT device `hmi-panel-{machine}`) | built+CI, HW? |
+| Hardening: touch exit, offline panel and retry, HA reachability 15 s, MQTT without retained command replay, atomic YAML with backup | built+CI, HW? |
+| WebView2 prerequisite check with verified Microsoft bootstrapper (setup path only; portable builds omit bootstrapper) | built+CI, clean-VM test HW? |
+| Dark theme readability corrections | built+CI, HW? |
+| Camera settings section always visible, 15 s enumeration timeout, manual refresh, persisted selection, serialized apply, slider range fix | built+CI (WPF UI regression without camera), HW? |
+| **Motion Wake** (`Mode = motion`): OpenCV frame difference, 2 samples/s, 160×120, hold 1-60 min (default 3), sensitivity 1-100 (default 50), keeps Windows awake while monitoring, wakes display if frames stop | built+CI, **HW?** |
+| **Face Presence** (`a768d1c`): optional Windows `FaceDetector`, exact Windows camera ID, ~1 check/s, 320×240 requested, no recording or recognition; design in [CAMERA.md](CAMERA.md) | built+CI, **HW?**; driver compatibility unknown |
+| MJPEG camera export (upstream) | unchanged |
+
+### Known problems and risks
+- **Camera:** camera settings could be hidden under Audio when Windows enumeration failed; commits `23b3da4`, `8222099`, `f16338b` address this in UI code and CI, but two-camera discovery on the Fusion5, privacy/driver access and the OpenCV index vs Windows device order (front vs rear) are unverified. Face Presence may not work with every camera driver, darkness, face coverings or rotated frames.
+- **Motion Wake:** motion is not presence; stationary people can time out, fans or light changes can trigger. Display sleep/wake commands are untested on the device.
+- **Single EXE startup** is slow on first run (native extraction, antivirus, WebView2 init); not measured. Use the portable directory if it is too slow.
+- PIN stored as Base64; MQTT password in YAML; broker must stay inside the trusted LAN.
+- Upstream issue #3 (Start menu/swipe) is an OS limitation; #5 shell replacement deferred. Kiosk mode is not a security boundary.
+- [TESTING.md](TESTING.md) still describes an installer flow in its first section; for this phase use the portable artifacts (corrected note added there).
+
+### Test results
+- Automated: CI smoke and WPF UI regression pass for `e342b04` (no camera, display or touch hardware involved).
+- Hardware: **none performed** for any item above. Acceptance list in [TESTING.md](TESTING.md).
+
+### Unfinished, suggested order
+1. Owner runs `HMI_Panel.exe` (or the portable directory) on the Fusion5: startup, HA login, settings persistence, touch exit; record device, OS, WebView2 version, commit and `panel.log`.
+2. Camera on the device: enumeration of both cameras, select front camera, Motion Wake with 1-minute hold, then Face Presence; verify display off/on and fail-safe wake when the camera disappears.
+3. Measure RAM/CPU after 10 min and longer run; decide single EXE vs portable directory.
+4. Network/HA/MQTT outage tests with an isolated broker.
+5. Only after acceptance: installer, signing, GrowBox optional theme (deferred), upstream sync per the workflow below. No new features without owner approval.
+
 ## Review and plan (2026-11-26)
 1. Stabilize touch exit, startup, missing WebView2, settings persistence, MQTT command handling and reconnection.
 2. Isolate update source and application identity before distributing a fork installer.
